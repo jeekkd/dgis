@@ -1,5 +1,4 @@
-DGIS - Daultons Gentoo Installer Script
-===================
+Dgis - Daultons Gentoo Installer Script
 
 ----------
 
@@ -100,7 +99,7 @@ script easier and smoother to use.
 
 Areas in which contribution would be highly encouraged especially, is adding additional desktop environment
 or some window manager support. To so create a module for your addition, it must be named in the format of
-<DE or WM name>-install.sh. This module is imported and the commands within will execute as a regular 
+`<DE or WM name>-install.sh`. This module is imported and the commands within will execute as a regular 
 script would essentially as a sub-shell.
 
 Each new desktop environment or some window manager requires an addition to the selection menu and a
@@ -143,6 +142,6 @@ import() {
 
 ----------
 After review both the module for your addition of a desktop environment or window manager, and the additions
-to the primary script, dgis-launch.sh, will be accepted.
+to the primary script, `dgis-launch.sh`, will be accepted.
 
 

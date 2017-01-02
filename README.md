@@ -1,4 +1,6 @@
 Dgis - Daultons Gentoo Installer Script
+---------------------------------------
+
 
 ----------
 
@@ -74,6 +76,12 @@ Then launch the script by doing the following as root:
 bash dgis-launch.sh
 ```
 
+Notable mention
+===
+
+This script features two of my other scripts, [restricted-iptables](https://github.com/jeekkd/restricted-iptables) and [gentoo-kernel-build](https://github.com/jeekkd/gentoo-kernel-build). The usage of restricted-iptables is optional, you are prompted at the end if you would to use it. The gentoo-kernel-build script is integrated with Dgis, this way you can get the benefits of a featureful build script in a way that seamlessly integrates. 
+
+
 Pitfalls
 ===
 
@@ -98,7 +106,7 @@ script easier and smoother to use.
 
 
 Areas in which contribution would be highly encouraged especially, is adding additional desktop environment
-or some window manager support. To so create a module for your addition, it must be named in the format of
+or some window manager support. To create a module for your addition, it must be named in the format of
 `<DE or WM name>-install.sh`. This module is imported and the commands within will execute as a regular 
 script would essentially as a sub-shell.
 

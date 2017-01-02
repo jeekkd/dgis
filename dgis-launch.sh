@@ -206,18 +206,6 @@ read -r inputNumber
 eselect profile set "$inputNumber"
 env-update && source /etc/profile && export PS1="(chroot) $PS1" 
 
-# Updating world
-echo
-echo "* Updating world.."
-confUpdate " --deep --with-bdeps=y --newuse --update @world"
-
-echo "* Setting CPU flags in /etc/portage/make.conf"
-emerge --oneshot -q app-portage/cpuid2cpuflags
-flags=$(cpuinfo2cpuflags-x86)
-echo " " >> /etc/portage/make.conf
-echo "# Supported CPU flags" >> /etc/portage/make.conf
-echo "$flags" >> /etc/portage/make.conf
-
 # Getting time zone data 
 echo "Would you like to use the default Canada/Central timezone (1) or enter your own (2)?"
 read -r answer
@@ -226,17 +214,12 @@ if [[ $answer == "1" ]]; then
 elif [[ $answer == "2" ]]; then
 	echo "Reference the Gentoo wiki for help - https://wiki.gentoo.org/wiki/System_time#OpenRC"
 	echo "Enter a timezone: "
-	read -r answer
-	echo "$answer" > /etc/timezone
+	read -r timezoneAnswer
+	echo "$timezoneAnswer" > /etc/timezone
 else
 	echo "Error: Enter either the number 1 or 2 as your selection."
 fi
 emerge -v --config sys-libs/timezone-data 
-
-# Getting system basics
-echo
-echo "* Emerging git, flaggie, dhcpcd..."
-confUpdate "dev-vcs/git app-portage/flaggie net-misc/dhcpcd"
 
 # Setting computer hostname
 echo
@@ -257,6 +240,31 @@ echo
 echo "* Enter a password for $inputUser"
 passwd "$inputUser"
 
+# Setting keymaps
+echo
+echo "* Do you need to edit keymaps? Default is en-US. Select Y/N"
+read -r answer
+if [[ $answer == "Y" || $answer == "y" ]]; then
+	nano -w /etc/conf.d/keymaps
+fi
+
+# Updating world
+echo
+echo "* Updating world.."
+confUpdate " --deep --with-bdeps=y --newuse --update @world"
+
+echo "* Setting CPU flags in /etc/portage/make.conf"
+emerge --oneshot -q app-portage/cpuid2cpuflags
+flags=$(cpuinfo2cpuflags-x86)
+echo " " >> /etc/portage/make.conf
+echo "# Supported CPU flags" >> /etc/portage/make.conf
+echo "$flags" >> /etc/portage/make.conf
+
+# Getting system basics
+echo
+echo "* Emerging git, flaggie, dhcpcd..."
+confUpdate "dev-vcs/git app-portage/flaggie net-misc/dhcpcd"
+
 # Locale configuration
 echo
 echo "* Locale selection.."
@@ -273,14 +281,6 @@ else
 	fi
 fi 
 env-update && source /etc/profile && export PS1="(chroot) $PS1" 
-
-# Setting keymaps
-echo
-echo "* Do you need to edit keymaps? Default is en-US. Select Y/N"
-read -r answer
-if [[ $answer == "Y" || $answer == "y" ]]; then
-	nano -w /etc/conf.d/keymaps
-fi
 
 # Hardware clock configuration
 echo
@@ -356,37 +356,75 @@ if [[ $answer == "Y" || $answer == "y" ]]; then
 fi
 
 echo "* Install and configure GRUB? Y/N"
-read -r answer
-if [[ $answer == "Y" || $answer == "y" ]]; then
+read -r updateGrub
+if [[ $updateGrub == "Y" || $updateGrub == "y" ]]; then		
 	isInstalled "sys-boot/grub:2"
 	isInstalled "sys-boot/os-prober"
-	lsblk
 	echo
-	echo "Which disk would you like to install grub onto? Ex: /dev/sda"
-	read -r whichDisk
-	
-	echo
-	echo "Is this a regular mbr install (press 1) or efi (press 2)?"
-	read -r answer
-	if [[ $answer == "1" ]]; then
-		grub-install "$whichDisk"
-	elif [[ $answer == "2" ]]; then
-		grub-install --target=x86_64-efi
-	else
-		echo "Error: Enter a number that is either 1 or 2"
+	isBootMounted=$(mount | grep /boot)
+	if [[ -z ${isBootMounted} ]]; then
+		echo "Error: /boot is not mounted - mount before attempting to proceed with GRUB installation."
+		exit 1
 	fi
-
-	# Sometimes grub saves new config with .new extension so this is assuring that an existing config is removed
-	# and the new one is renamed after installation so it can be used properly		
+	
+	if [ ! -d /boot/grub/ ]; then
+		echo "Error: /boot/grub/ directory does not exist. Install grub onto main disk? Y/N"
+		read -r installGrub
+		if [[ $installGrub == "Y" || $installGrub == "y" ]]; then
+			echo
+			echo "Is this a BIOS with MBR or BIOS with GPT (press 1) or UEFI with GPT (press 2)?"
+			read -r grubType
+			echo
+			lsblk
+			echo
+			if [[ $grubType == "1" ]]; then
+				echo
+				echo "Which disk do you want to install GRUB onto? Ex: /dev/sda"
+				read -r whichDisk
+				grub-install "$whichDisk"
+				echo
+			elif [[ $grubType == "2" ]]; then
+				grub-install --efi-directory=/boot/efi
+				echo
+			else
+				echo "Error: Enter a number that is either 1 or 2"
+			fi
+		else
+			echo "User entered: $installGrub - cannot proceed with updating GRUB without installing"
+			echo "it first."
+			break
+		fi
+	fi
+	
 	if [ -f /boot/grub/grub.cfg ]; then
 		rm -f /boot/grub/grub.cfg
+	elif [ -f /boot/efi/EFI/GRUB/grub.cfg ]; then
+		rm -f /boot/efi/EFI/GRUB/grub.cfg
 	fi
 	
-	grub-mkconfig -o /boot/grub/grub.cfg
-	if [ $? -eq 0 ]; then
-		if [ -f /boot/grub/grub.cfg.new ]; then
-			mv /boot/grub/grub.cfg.new /boot/grub/grub.cfg
-		fi 
+	if [[ $grubType == "1" ]]; then
+		grub-mkconfig -o /boot/grub/grub.cfg
+		if [ $? -eq 0 ]; then
+			# Sometimes grub saves new config with .new extension so this is assuring that an existing config is 
+			# removed and the new one is renamed after installation so it can be used properly
+			if [ -f /boot/grub/grub.cfg.new ]; then
+				mv /boot/grub/grub.cfg.new /boot/grub/grub.cfg
+			fi
+		fi
+		if [ ! -f /boot/grub/grub.cfg ]; then	
+			echo "Error: grub.cfg does not exist - running mkconfig again to attempt to fix the issue"
+			grub-mkconfig -o /boot/grub/grub.cfg
+		fi
+	elif [[ $grubType == "2" ]]; then
+		grub-mkconfig -o /boot/efi/EFI/GRUB/grub.cfg
+		if [ -f /boot/efi/EFI/GRUB/grub.cfg.new ]; then
+			mv /boot/efi/EFI/GRUB/grub.cfg.new /boot/efi/EFI/GRUB/grub.cfg
+		fi
+		
+		if [ ! -f /boot/efi/EFI/GRUB/grub.cfg ]; then	
+			echo "Error: grub.cfg does not exist - running mkconfig again to attempt to fix the issue"
+			grub-mkconfig -o /boot/efi/EFI/GRUB/grub.cfg
+		fi
 	fi
 fi
 
@@ -410,7 +448,8 @@ read -r iptablesAnswer
 if [[ $iptablesAnswer == "Y" || $iptablesAnswer == "y" ]]; then
 	git clone https://github.com/jeekkd/restricted-iptables
 	echo
-	echo "Note: Reference README for configuration information"
+	echo "Note: Reference README for configuration information and assure"
+	echo "to read carefully through configuration.sh"
 fi
 
 echo

@@ -89,7 +89,9 @@ if [[ $installXorg == "Y" ]] || [[ $installXorg == "y" ]]; then
 		echo
 		echo "A. Xfce"
 		echo "B. KDE"
-		echo "C. Skip this selection"
+		echo "C. Ratpoison"
+		echo "D. LXDE"
+		echo "E. Skip this selection"
 		echo
 		echo -n "Enter a selection: "
 		read -r option
@@ -98,20 +100,30 @@ if [[ $installXorg == "Y" ]] || [[ $installXorg == "y" ]]; then
 				
 		[Aa])
 			installDesktop=1
-			echo "Xfce has been selected for the desktop environment"
+			echo "Xfce has been selected for the Desktop Environment"
 			break
 		;;
 		[Bb])
 			installDesktop=2
-			echo "KDE has been selected for the desktop environment"
+			echo "KDE has been selected for the Desktop Environment"
 			break
 		;;
 		[Cc])
+			installDesktop=3
+			echo "Ratpoison has been selected for the Window Manager"
+			break
+		;;
+		[Dd])
+			installDesktop=4
+			echo "LXDE has been selected for the Desktop Environment"
+			break
+		;;
+		[Ee])
 			echo "Skipping desktop environment selection.."
 			break
 		;;
 		*)
-			echo "Enter a valid selection from the menu - options include A to C"
+			echo "Enter a valid selection from the menu - options include A to E"
 		;;	
 		esac 	
     done
@@ -301,10 +313,12 @@ fi
 # Installing desktop environment or window manager selection
 if [[ $installDesktop == "1" ]]; then
 	import xfce-install
-fi
-
-if [[ $installDesktop == "2" ]]; then
+elif [[ $installDesktop == "2" ]]; then
 	import kde-install
+elif [[ $installDesktop == "3" ]]; then
+	import ratpoison-install
+elif [[ $installDesktop == "4" ]]; then
+	import lxde-install
 fi
 
 # Install and build kernel
@@ -357,7 +371,6 @@ fi
 
 echo "* Install and configure GRUB? Y/N"
 read -r updateGrub
-read -r updateGrub
 if [[ $updateGrub == "Y" || $updateGrub == "y" ]]; then		
 	isInstalled "sys-boot/grub:2"
 	isInstalled "sys-boot/os-prober"
@@ -403,8 +416,7 @@ if [[ $updateGrub == "Y" || $updateGrub == "y" ]]; then
 	fi
 	
 	if [ -f /boot/grub/grub.cfg ]; then
-		rm -f /boot/grub/grub.cfg
-		
+		rm -f /boot/grub/grub.cfg	
 	elif [ -f /boot/efi/EFI/GRUB/grub.cfg ]; then
 		rm -f /boot/efi/EFI/GRUB/grub.cfg
 	fi

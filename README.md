@@ -16,6 +16,26 @@ The intended use is that first your partitioning is done as you wish, you run th
 everything up the point of configuring the fstab or any additional options your grub configuration may
 require.
 
+Supported Desktop Environments and Window Managers
+===
+
+- KDE
+- XFCE
+- Ratpoison
+- LXDE
+
+> **Note:** 
+> There are more to come, but open an issue to request a specific one!
+
+Notable mention
+===
+
+This project features two of my other scripts, [restricted-iptables](https://github.com/jeekkd/restricted-iptables) and [gentoo-kernel-build](https://github.com/jeekkd/gentoo-kernel-build). The usage of restricted-iptables is optional, you are prompted at the end if you would to use it. If you choose to use it, it aims to be a configurable iptables firewall script meant to make firewalls easier so it may be of interest you. Additionally, it was written on a Gentoo system so it has excellent support.
+
+The gentoo-kernel-build script is integrated with Dgis, this way you can get the benefits of a featureful build kernel script in a way that seamlessly integrates. For its features [check out the project page.](https://github.com/jeekkd/gentoo-kernel-build)
+
+These two projects can of course be used independently of Dgis, so consider checking them out for your own usage.
+
 How to use
 ===
 
@@ -76,23 +96,17 @@ Then launch the script by doing the following as root:
 bash dgis-launch.sh
 ```
 
-Notable mention
-===
-
-This script features two of my other scripts, [restricted-iptables](https://github.com/jeekkd/restricted-iptables) and [gentoo-kernel-build](https://github.com/jeekkd/gentoo-kernel-build). The usage of restricted-iptables is optional, you are prompted at the end if you would to use it. The gentoo-kernel-build script is integrated with Dgis, this way you can get the benefits of a featureful build script in a way that seamlessly integrates. 
-
 
 Pitfalls
 ===
 
-- OpenRC only unless there is demand for systemd.
+- OpenRC only at this time unless there becomes some demand for systemd.
 
-- Must assume a variety of input and video devices to support a wider audience of users hardware.
+- Must assume a variety of input and video devices to support a wider audience of users hardware, feel free to add or remove from options from VIDEO_CARDS and INPUT_DEVICES at approximately line 300 in dgis-launch.sh.
 
-- Supports a limited number of desktop environments. Requests and pull requests are accepted, see
-the contributing section.
+- Supports a limited number of desktop environments at this moment. Requests and pull requests are accepted, see the contributing section or open an issue with your request.
 
-- X only, no Wayland support yet - it could be supported if requested.
+- X only currently, there is no Wayland support yet - it could be supported if requested.
 
 Contributing
 ===

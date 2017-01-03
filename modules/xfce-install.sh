@@ -33,8 +33,9 @@ fi
 # Install display manager
 if [[ $installLightDM == "Y" ]] || [[ $installLightDM == "y" ]]; then
 	echo
+	flaggie x11-misc/lightdm-gtk-greeter +branding
 	echo "* Display manager installation.."
-	confUpdate "x11-misc/lightdm"
+	confUpdate "x11-misc/lightdm-gtk-greeter"
 	sed -i 's/xdm/lightdm/g' /etc/conf.d/xdm
 fi
 

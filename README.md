@@ -102,7 +102,7 @@ Pitfalls
 
 - OpenRC only at this time unless there becomes some demand for systemd.
 
-- Must assume a variety of input and video devices to support a wider audience of users hardware, feel free to add or remove from options from VIDEO_CARDS and INPUT_DEVICES at approximately line 300 in dgis-launch.sh.
+- Must assume a variety of input and video devices to support a wider audience of users hardware, feel free to add or remove from VIDEO_CARDS and INPUT_DEVICES at approximately line 300 in `dgis-launch.sh`.
 
 - Supports a limited number of desktop environments at this moment. Requests and pull requests are accepted, see the contributing section or open an issue with your request.
 

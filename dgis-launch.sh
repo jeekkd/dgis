@@ -130,10 +130,7 @@ if [[ $installXorg == "Y" ]] || [[ $installXorg == "y" ]]; then
 	
 	if [[ $installDesktop == "1" ]]; then
         echo
-        echo "Install lightdm display manager? Y/N"
-        read -r installLightDM
-        echo
-		echo "Install Vertex and Paper Icons theme? Y/N"
+		echo "Install Vertex GTK and Paper Icons themes? Y/N"
 		read -r installTheme
 		echo
 		echo "Install default set of applications? Y/N"
@@ -143,7 +140,8 @@ fi
 
 # Set DNS server
 echo
-echo "Would you like to use the default nameserver (1) or enter one (2)?"
+echo "Would you like to use the default Google 8.8.8.8 nameserver (Press 1)"
+echo "or enter one of your own (Press 2)?"
 read -r answer
 if [[ $answer == "1" ]]; then
 	echo "nameserver $nameServer" > /etc/resolv.conf
@@ -154,7 +152,7 @@ if [[ $answer == "1" ]]; then
 		exit 1
 	fi	
 elif [[ $answer == "2" ]]; then
-	echo "Enter a nameserver in dotted decimal format such as 0.0.0.0"
+	echo "Enter a nameserver in dotted decimal format such as 8.8.8.8"
 	read -r answer
 	echo "nameserver $answer" > /etc/resolv.conf
 	if [ $? -gt 0 ]; then
@@ -463,10 +461,17 @@ echo "It is a configurable iptables firewall script meant to make firewalls easi
 echo "Reference the repo at: https://github.com/jeekkd/restricted-iptables"
 read -r iptablesAnswer
 if [[ $iptablesAnswer == "Y" || $iptablesAnswer == "y" ]]; then
+	confUpdate "net-firewall/iptables"
+	echo
 	git clone https://github.com/jeekkd/restricted-iptables
 	echo
-	echo "Note: Reference README for configuration information and assure"
-	echo "to read carefully through configuration.sh"
+	echo "Note: Reference README for configuration information and usage, and assure"
+	echo "to read carefully through configuration.sh when doing configuration."
+	echo
+	echo
+	echo "* Adding iptables and ip6tables to OpenRC for boot.."
+	rc-update add iptables default
+	rc-update add ip6tables default
 fi
 
 echo

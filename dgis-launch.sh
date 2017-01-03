@@ -350,12 +350,13 @@ echo
 echo "* Would you like to install linux-firmware? Y/N"
 echo "Some devices require additional firmware to be installed on the system before they work. This is often 
 the case for network interfaces, especially wireless network interfaces"
-read -r answer
-if [[ $answer == "Y" || $answer == "y" ]]; then
+read -r firmwareAnswer
+if [[ $firmwareAnswer == "Y" || $firmwareAnswer == "y" ]]; then
 	confUpdate "sys-kernel/linux-firmware"
 fi
 
 echo "* Install and configure GRUB? Y/N"
+read -r updateGrub
 read -r updateGrub
 if [[ $updateGrub == "Y" || $updateGrub == "y" ]]; then		
 	isInstalled "sys-boot/grub:2"
@@ -396,8 +397,14 @@ if [[ $updateGrub == "Y" || $updateGrub == "y" ]]; then
 		fi
 	fi
 	
+	if [[ -z ${grubType} ]]; then
+		echo "Is this a BIOS with MBR or BIOS with GPT (press 1) or UEFI with GPT (press 2)?"
+		read -r grubType
+	fi
+	
 	if [ -f /boot/grub/grub.cfg ]; then
 		rm -f /boot/grub/grub.cfg
+		
 	elif [ -f /boot/efi/EFI/GRUB/grub.cfg ]; then
 		rm -f /boot/efi/EFI/GRUB/grub.cfg
 	fi
@@ -405,8 +412,6 @@ if [[ $updateGrub == "Y" || $updateGrub == "y" ]]; then
 	if [[ $grubType == "1" ]]; then
 		grub-mkconfig -o /boot/grub/grub.cfg
 		if [ $? -eq 0 ]; then
-			# Sometimes grub saves new config with .new extension so this is assuring that an existing config is 
-			# removed and the new one is renamed after installation so it can be used properly
 			if [ -f /boot/grub/grub.cfg.new ]; then
 				mv /boot/grub/grub.cfg.new /boot/grub/grub.cfg
 			fi

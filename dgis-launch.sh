@@ -3,9 +3,10 @@
 # Website: https://daulton.ca
 # 
 # This is a script to install Gentoo in a partially interactive manner, it gives a baseline install 
-# configured with Xorg, a display manager, a supported desktop environment or window manager, 
-# etc. while giving the flexability to be set your own values for locale, timezone, usernames, 
-# passwords, hostname, etc.
+# configured with Gentoo itself, a kernel, bootloader, some necessary applications, etc. while giving the 
+# flexibility to be prompted for desktop environment or window manager (or none at all if you choose), 
+# display manager, along with locale, time zone, usernames, passwords, hostname and other user specific 
+# selections.
 #
 # The intended use is that first your partitioning is done as you wish, you run the script and it handles
 # everything up the point of configuring the fstab or any additional options your grub configuration may
@@ -13,17 +14,19 @@
 # custom configuration and a one size fits all solution does not work for all.
 #
 # Procedure:
-# 1. Mount root on /mnt/gentoo
+# 1. Mount root on /mnt/gentoo (and other partitions where they belong if they are seperate from root)
 # 2. cd to /mnt/gentoo
 # 3. untar your stage3 of choice as you normally would
-# 4. Clone the repo to get the source
+# 4. Clone the repo to get the scripts
 # 5. Create and enter a chroot at /mnt/gentoo
-# 6. Edit the /etc/fstab with your partitions
-# 7. Run the script
+# 6. cd to dgis/
+# 7. Edit the /etc/fstab with your partitions (or after the script as ran, either way)
+# 8. Run the script with bash dgis-launch.sh
+# 9. Reboot
 
 ################## VARIABLES ##################
 # Default nameserver to set in resolv.conf
-nameServer="8.8.8.8"
+defaultNameserver="8.8.8.8"
 
 # Default timezone
 timezone="Canada/Central"
@@ -40,7 +43,7 @@ get_script_dir() {
 get_script_dir
 
 control_c() {
-	echo "Control-c pressed - exiting NOW"
+	printf "Control-c pressed - exiting NOW"
 	exit $?
 }
 
@@ -77,107 +80,109 @@ isInstalled() {
     fi
 }
 
-echo "Install Xorg? Y/N"
+printf "Install Xorg? Y/N"
 read -r installXorg
 if [[ $installXorg == "Y" ]] || [[ $installXorg == "y" ]]; then	
-	echo
+	printf
 	while true ; do
-		echo
-		echo "----------------------------------"
-		echo "Desktop Environment Selection menu"
-		echo "----------------------------------"
-		echo
-		echo "A. Xfce"
-		echo "B. KDE"
-		echo "C. Ratpoison"
-		echo "D. LXDE"
-		echo "E. Skip this selection"
-		echo
-		echo -n "Enter a selection: "
-		read -r option
-			
-		case "$option" in
-				
+		printf "\n"
+		printf "=================================== \n" 
+		printf "Desktop Environment Selection menu \n"
+		printf "=================================== \n"
+		printf "\n"
+		printf "A. Xfce \n"
+		printf "B. KDE \n"
+		printf "C. Ratpoison \n"
+		printf "D. LXDE \n"
+		printf "E. Xmonad \n"
+		printf "F. Skip this selection \n"
+		printf "\n"
+		printf "Enter a selection: \n"
+		read -r option			
+		case "$option" in				
 		[Aa])
 			installDesktop=1
-			echo "Xfce has been selected for the Desktop Environment"
+			printf "Xfce has been selected for the Desktop Environment \n"
 			break
 		;;
 		[Bb])
 			installDesktop=2
-			echo "KDE has been selected for the Desktop Environment"
+			printf "KDE has been selected for the Desktop Environment \n"
 			break
 		;;
 		[Cc])
 			installDesktop=3
-			echo "Ratpoison has been selected for the Window Manager"
+			printf "Ratpoison has been selected for the Window Manager \n"
 			break
 		;;
 		[Dd])
 			installDesktop=4
-			echo "LXDE has been selected for the Desktop Environment"
+			printf "LXDE has been selected for the Desktop Environment \n"
 			break
 		;;
 		[Ee])
-			echo "Skipping desktop environment selection.."
+			installDesktop=5
+			printf "Xmonad has been selected for the Window Manager \n"
+			break
+		;;
+		[Ff])
+			printf "Skipping desktop environment selection.. \n"
 			break
 		;;
 		*)
-			echo "Enter a valid selection from the menu - options include A to E"
+			printf "Enter a valid selection from the menu - options include A to E \n"
 		;;	
 		esac 	
     done
 	
 	if [[ $installDesktop == "1" ]]; then
-        echo
-		echo "Install Vertex GTK and Paper Icons themes? Y/N"
+        printf "\n"
+		printf "Install Vertex GTK and Paper Icons themes? Y/N \n"
 		read -r installTheme
-		echo
-		echo "Install default set of applications? Y/N"
+		printf "\n"
+		printf "Install default set of applications? Y/N \n"
 		read -r installApplications	
 	fi
 fi
 
 # Set DNS server
-echo
-echo "Would you like to use the default Google 8.8.8.8 nameserver (Press 1)"
-echo "or enter one of your own (Press 2)?"
-read -r answer
-if [[ $answer == "1" ]]; then
-	echo "nameserver $nameServer" > /etc/resolv.conf
-	if [ $? -eq 0 ]; then
-		echo "Success: Set nameserver to $nameServer"
-	else
-		echo "Error: Failed to set nameserver to $nameServer"
+printf "\n"
+printf "Would you like to use the default Google 8.8.8.8 nameserver (Press 1) \n"
+printf "or enter one of your own (Press 2)? \n"
+read -r nameserverOptions
+if [[ $nameserverOptions == "1" ]]; then
+	printf "nameserver $defaultNameserver\n" > /etc/resolv.conf
+	if [ $? -gt 0 ]; then
+		printf "Error: Failed to set nameserver to $nameServer\n"
 		exit 1
 	fi	
-elif [[ $answer == "2" ]]; then
-	echo "Enter a nameserver in dotted decimal format such as 8.8.8.8"
-	read -r answer
-	echo "nameserver $answer" > /etc/resolv.conf
+elif [[ $nameserverOptions == "2" ]]; then
+	printf "Enter a nameserver in dotted decimal format such as 8.8.8.8\n"
+	read -r enteredNameserver
+	printf "nameserver $enteredNameserver\n" > /etc/resolv.conf
 	if [ $? -gt 0 ]; then
-		echo "Error: Failed to set nameserver to $answer.."
+		printf "Error: Failed to set nameserver to $answer..\n"
 		exit 1
 	fi
 else
-	echo "Error: Enter either the number 1 or 2 as your selection."
+	printf "Error: Enter either the number 1 or 2 as your selection.\n"
 fi
 
 # Configuring system basics
 mkdir -p /etc/portage/repos.conf/
 
 if [ ! -f /etc/portage/repos.conf/gentoo.conf ]; then
-	echo "[gentoo]" >> /etc/portage/repos.conf/gentoo.conf
-	echo "location = /usr/portage" >> /etc/portage/repos.conf/gentoo.conf
-	echo "sync-type = rsync" >> /etc/portage/repos.conf/gentoo.conf
-	echo "sync-uri = rsync://rsync.gentoo.org/gentoo-portage" >> /etc/portage/repos.conf/gentoo.conf
-	echo "auto-sync = yes" >> /etc/portage/repos.conf/gentoo.conf
+	printf "[gentoo]\n" >> /etc/portage/repos.conf/gentoo.conf
+	printf "location = /usr/portage\n" >> /etc/portage/repos.conf/gentoo.conf
+	printf "sync-type = rsync\n" >> /etc/portage/repos.conf/gentoo.conf
+	printf "sync-uri = rsync://rsync.gentoo.org/gentoo-portage\n" >> /etc/portage/repos.conf/gentoo.conf
+	printf "auto-sync = yes\n" >> /etc/portage/repos.conf/gentoo.conf
 fi
 
 if [ -f /etc/portage/repos.conf/gentoo.conf ]; then
 	chmod 644 /etc/portage/repos.conf/gentoo.conf
 else
-	echo "Error: gentoo.conf does not exist in /etc/portage/repos.conf/ - exiting"
+	printf "Error: gentoo.conf does not exist in /etc/portage/repos.conf/ - exiting\n"
 	exit 1
 fi
 
@@ -186,98 +191,124 @@ cp make.conf /etc/portage/
 if [ -f /etc/portage/make.conf ]; then
 	chmod 644 /etc/portage/make.conf
 	detectCores=$(cat /proc/cpuinfo | awk '/^processor/{print $3}' | tail -1)
-	echo " " >> /etc/portage/make.conf
-	echo "# Make concurrency level for emerges" >> /etc/portage/make.conf
-	MAKEOPTS="-j$detectCores" >> /etc/portage/make.conf
+	printf " \n" >> /etc/portage/make.conf
+	printf "# Make concurrency level for emerges \n" >> /etc/portage/make.conf
+	MAKEOPTS="-j$detectCores\n" >> /etc/portage/make.conf
 	env-update && source /etc/profile && export PS1="(chroot) $PS1" 
 else
-	echo "Error: make.conf does not exist in /etc/portage/ - exiting"
+	printf "Error: make.conf does not exist in /etc/portage/ - exiting \n"
 	exit 1
 fi
 
 # Updating portage tree with webrsync
-echo
-echo "* Syncing then emerging portage.."
-emerge --sync
+printf "\n"
+printf "* Syncing then emerging portage.. \n"
+emerge-webrsync
 if [ $? -eq 0 ]; then
 	emerge --oneshot -q sys-apps/portage
 else
-	echo "Error: emerge sync failed - exiting"
+	printf "Error: emerge sync failed - exiting \n"
 	exit 1
 fi
 
 # Profile selection
-echo
-echo "* Listing profiles..."
+printf "\n"
+printf "* Listing profiles... \n"
 eselect profile list
-echo
-echo "Which profile would you like? Type a number: "
+printf "\n"
+printf "Which profile would you like? Type a number: \n"
 read -r inputNumber
 eselect profile set "$inputNumber"
 env-update && source /etc/profile && export PS1="(chroot) $PS1" 
 
-# Getting time zone data 
-echo "Would you like to use the default Canada/Central timezone (1) or enter your own (2)?"
-read -r answer
-if [[ $answer == "1" ]]; then
-	echo "Canada/Central" > /etc/timezone
-elif [[ $answer == "2" ]]; then
-	echo "Reference the Gentoo wiki for help - https://wiki.gentoo.org/wiki/System_time#OpenRC"
-	echo "Enter a timezone: "
-	read -r timezoneAnswer
-	echo "$timezoneAnswer" > /etc/timezone
-else
-	echo "Error: Enter either the number 1 or 2 as your selection."
-fi
+# Getting time zone data
+for (( ; ; )); do
+	printf "\n"
+	printf "Would you like to use the default Canada/Central timezone (1) or enter your own (2)? \n"
+	read -r timezoneOption
+	if [[ $timezoneOption == "1" ]]; then
+		printf "Canada/Central\n" > /etc/timezone
+		break
+	elif [[ $timezoneOption == "2" ]]; then
+		printf "Reference the Gentoo wiki for help - https://wiki.gentoo.org/wiki/System_time#OpenRC \n"
+		printf "Enter a timezone: \n"
+		read -r timezoneAnswer
+		printf "$timezoneAnswer\n" > /etc/timezone
+		break
+	else
+		printf "Error: Enter either the number 1 or 2 as your selection. \n"
+	fi
+done
 emerge -v --config sys-libs/timezone-data 
 
 # Setting computer hostname
-echo
-echo "* Setting hostname..."
+printf "\n"
+printf "* Setting hostname... \n"
 nano -w /etc/conf.d/hostname
 
 # Setting the root password
-echo
-echo "* Enter a password for the root account: "
+printf "\n"
+printf "* Enter a password for the root account: \n"
 passwd root 
 
 # Creating the user account and setting its password
-echo
-echo "* Enter a username for your user: "
-read -r inputUser
-useradd -m -G users,usb,video,portage,audio -s /bin/bash "$inputUser"
-echo
-echo "* Enter a password for $inputUser"
-passwd "$inputUser"
+for (( ; ; )); do
+	printf "\n"
+	printf "* Enter a username for your user: \n"
+	read -r inputUser
+	printf "\n"
+	printf "Confirm that $inputUser is the desired username. Press Y/N \n"
+	read -r usernameConfirm
+	if [[ $usernameConfirm == "Y" || $usernameConfirm == "y" ]]; then
+		useradd -m -G users,usb,video,portage,audio -s /bin/bash "$inputUser"
+		printf "\n"
+		printf "* Enter a password for $inputUser \n"
+		passwd "$inputUser"
+		break
+	elif [[ $usernameConfirm == "N" || $usernameConfirm == "n" ]]; then
+		printf "No was selected, re-asking for correct username\n"
+	else
+		printf "Error: Enter either the number 1 or 2 as your selection. \n"
+	fi
+done
 
 # Setting keymaps
-echo
-echo "* Do you need to edit keymaps? Default is en-US. Select Y/N"
-read -r answer
-if [[ $answer == "Y" || $answer == "y" ]]; then
-	nano -w /etc/conf.d/keymaps
-fi
+for (( ; ; )); do
+	printf "\n"
+	printf "* Do you need to edit keymaps? Default is en-US. Select Y/N \n"
+	read -r answerKeymaps
+	if [[ $answerKeymaps == "Y" || $answerKeymaps == "y" ]]; then
+		nano -w /etc/conf.d/keymaps
+		break
+	elif [[ $answerKeymaps == "N" || $answerKeymaps == "n" ]]; then
+		printf "Skipping editing keymaps \n"
+		break
+	else
+		printf "Error: Invalid selection, enter either Y or N \n"
+	fi
+done
 
 # Updating world
-echo
-echo "* Updating world.."
+printf "\n"
+printf "* Updating world.. \n"
 confUpdate " --deep --with-bdeps=y --newuse --update @world"
 
-echo "* Setting CPU flags in /etc/portage/make.conf"
+# Setting CPU flags in /etc/portage/make.conf
+printf "* Setting CPU flags in /etc/portage/make.conf \n"
 emerge --oneshot -q app-portage/cpuid2cpuflags
 flags=$(cpuinfo2cpuflags-x86)
-echo " " >> /etc/portage/make.conf
-echo "# Supported CPU flags" >> /etc/portage/make.conf
-echo "$flags" >> /etc/portage/make.conf
+printf " \n" >> /etc/portage/make.conf
+printf "# Supported CPU flags \n" >> /etc/portage/make.conf
+printf "$flags \n" >> /etc/portage/make.conf
 
 # Getting system basics
-echo
-echo "* Emerging git, flaggie, dhcpcd..."
+printf "\n"
+printf "* Emerging git, flaggie, dhcpcd... \n"
 confUpdate "dev-vcs/git app-portage/flaggie net-misc/dhcpcd"
 
 # Locale configuration
-echo
-echo "* Locale selection.."
+printf "\n"
+printf "* Locale selection.. \n"
 nano -w /etc/locale.gen 
 locale-gen 
 localeUtf=$(eselect locale list | awk '/utf8/{print $1}' | sed 's/.*\[//;s/\].*//;')
@@ -290,21 +321,35 @@ else
 		eselect locale set 1
 	fi
 fi 
-env-update && source /etc/profile && export PS1="(chroot) $PS1" 
+. /etc/profile
 
 # Hardware clock configuration
-echo
-echo "* Hardware clock configuration.."
-nano -w /etc/conf.d/hwclock
+for (( ; ; )); do
+	printf "\n"
+	printf "* Do you need to edit hwclock options?. Select Y/N \n"
+	read -r editHwclock
+	if [[ $editHwclock == "Y" || $editHwclock == "y" ]]; then
+		nano -w /etc/conf.d/keymaps
+		break
+	elif [[ $editHwclock == "N" || $editHwclock == "n" ]]; then
+		printf "Skipping editing hwclock settings \n"
+		break
+	else
+		printf "Error: Invalid selection, enter either Y or N \n"
+	fi
+done
 
 # Installing Xorg
+# Add or remove contents of VIDEO_CARDS and INPUT_DEVICES as necessary, this current configuration is
+# meant to encompass a variety of setups for ease of use to the user
 if [[ $installXorg == "Y" ]] || [[ $installXorg == "y" ]]; then	
-	echo "# Video and input devices for Xorg"
-	echo "VIDEO_CARDS=\"radeon radeonsi nouveau intel\"" >> /etc/portage/make.conf
-	echo "INPUT_DEVICES=\"keyboard mouse synaptics evdev\"" >> /etc/portage/make.conf
+	printf " \n" >> /etc/portage/make.conf
+	printf "# Video and input devices for Xorg" >> /etc/portage/make.conf
+	printf "VIDEO_CARDS=\"radeon radeonsi nouveau intel\"" >> /etc/portage/make.conf
+	printf "INPUT_DEVICES=\"keyboard mouse synaptics evdev\"" >> /etc/portage/make.conf
 	env-update && source /etc/profile && export PS1="(chroot) $PS1" 
-	echo
-	echo "* Xorg installation.."
+	printf "\n"
+	printf "* Xorg installation.. \n"
 	confUpdate "x11-base/xorg-drivers x11-drivers/xf86-video-fbdev x11-drivers/xf86-video-vesa"
 fi
 
@@ -317,40 +362,52 @@ elif [[ $installDesktop == "3" ]]; then
 	import ratpoison-install
 elif [[ $installDesktop == "4" ]]; then
 	import lxde-install
+elif [[ $installDesktop == "5" ]]; then
+	import xmonad-install
 fi
 
 # Install and build kernel
-echo
-echo "* Cloning repo for my gentoo_kernel_build script to build the kernel"
-echo
+printf "\n"
+printf "* Cloning repo for my gentoo_kernel_build script to build the kernel \n"
+printf "\n"
 git clone https://github.com/jeekkd/gentoo-kernel-build.git && cd gentoo-kernel-build
 if [ $? -eq 0 ]; then	
 	chmod 770 build_kernel.sh
 	bash build_kernel.sh
 	if [ $? -gt 0 ]; then	
-		echo "Error: build_kernel.sh failed - exiting"
-		exit 1
+		for (( ; ; )); do
+			printf "Error: build_kernel.sh failed - try again? Y/N \n"
+			read -r kernelBuildRetry
+			if [[ $kernelBuildRetry == "Y" ]] || [[ $kernelBuildRetry == "y" ]]; then	
+				bash build_kernel.sh
+			elif [[ $kernelBuildRetry == "N" ]] || [[ $kernelBuildRetry == "n" ]]; then	
+				printf "No selected, skipping retrying kernel build. \n"
+				break
+			else
+				printf "Error: Invalid selection, enter either Y or N \n"
+			fi
+		done
 	else
 		cd ..
 	fi
 else
-	echo "Error: git clone failed for retrieving kernel build script"
+	printf "Error: git clone failed for retrieving kernel build script from the following location https://github.com/jeekkd/gentoo-kernel-build \n"
 	exit 1
 fi
 
-echo "* Beginning to emerge helpful and necessary programs such as hwinfo and usbutils..."
+printf "* Beginning to emerge helpful and necessary programs such as hwinfo, usbutils, sudo, rsyslog... \n"
 flaggie app-admin/logrotate +acl
 flaggie app-admin/logrotate +cron
 
 confUpdate "sys-process/fcron app-admin/logrotate sys-apps/hwinfo app-admin/sudo app-admin/rsyslog net-firewall/iptables app-portage/gentoolkit sys-apps/usbutils"
 if [ $? -gt 0 ]; then	
-    # Put created user in cron group now that fcron is installed
+    usermod -aG wheel "$inputUser"
     usermod -aG cron "$inputUser"
     usermod -aG cron root
 fi
     
-echo
-echo "* Adding programs to OpenRC for boot.."
+printf
+printf "* Adding startup items to OpenRC for boot.. \n"
 rc-update add consolekit default
 rc-update add xdm default
 rc-update add dbus default
@@ -358,123 +415,53 @@ rc-update add dhcpcd default
 rc-update add rsyslog default
 rc-update add fcron default
 
-echo
-echo "* Would you like to install linux-firmware? Y/N"
-echo "Some devices require additional firmware to be installed on the system before they work. This is often 
-the case for network interfaces, especially wireless network interfaces"
-read -r firmwareAnswer
-if [[ $firmwareAnswer == "Y" || $firmwareAnswer == "y" ]]; then
-	confUpdate "sys-kernel/linux-firmware"
-fi
+for (( ; ; )); do
+	printf "\n"
+	printf "* Would you like to install linux-firmware? Y/N \n"
+	printf "Some devices require additional firmware to be installed on the system before they work. This is often the case for network interfaces, especially wireless network interfaces \n"
+	read -r firmwareAnswer
+	if [[ $firmwareAnswer == "Y" || $firmwareAnswer == "y" ]]; then
+		confUpdate "sys-kernel/linux-firmware"
+		break
+	elif [[ $firmwareAnswer == "N" || $firmwareAnswer == "n" ]]; then
+		printf "No was selected, skipping linux-firmware installation. \n"
+		break
+	else
+		printf "Error: Invalid selection, enter either Y or N \n"
+	fi
+done
 
-echo "* Install and configure GRUB? Y/N"
-read -r updateGrub
-if [[ $updateGrub == "Y" || $updateGrub == "y" ]]; then		
-	isInstalled "sys-boot/grub:2"
-	isInstalled "sys-boot/os-prober"
-	echo
-	isBootMounted=$(mount | grep /boot)
-	if [[ -z ${isBootMounted} ]]; then
-		echo "Error: /boot is not mounted - mount before attempting to proceed with GRUB installation."
-		exit 1
-	fi
-	
-	if [ ! -d /boot/grub/ ]; then
-		echo "Error: /boot/grub/ directory does not exist. Install grub onto main disk? Y/N"
-		read -r installGrub
-		if [[ $installGrub == "Y" || $installGrub == "y" ]]; then
-			echo
-			echo "Is this a BIOS with MBR or BIOS with GPT (press 1) or UEFI with GPT (press 2)?"
-			read -r grubType
-			echo
-			lsblk
-			echo
-			if [[ $grubType == "1" ]]; then
-				echo
-				echo "Which disk do you want to install GRUB onto? Ex: /dev/sda"
-				read -r whichDisk
-				grub-install "$whichDisk"
-				echo
-			elif [[ $grubType == "2" ]]; then
-				grub-install --efi-directory=/boot/efi
-				echo
-			else
-				echo "Error: Enter a number that is either 1 or 2"
-			fi
-		else
-			echo "User entered: $installGrub - cannot proceed with updating GRUB without installing"
-			echo "it first."
-			break
-		fi
-	fi
-	
-	if [[ -z ${grubType} ]]; then
-		echo "Is this a BIOS with MBR or BIOS with GPT (press 1) or UEFI with GPT (press 2)?"
-		read -r grubType
-	fi
-	
-	if [ -f /boot/grub/grub.cfg ]; then
-		rm -f /boot/grub/grub.cfg	
-	elif [ -f /boot/efi/EFI/GRUB/grub.cfg ]; then
-		rm -f /boot/efi/EFI/GRUB/grub.cfg
-	fi
-	
-	if [[ $grubType == "1" ]]; then
-		grub-mkconfig -o /boot/grub/grub.cfg
-		if [ $? -eq 0 ]; then
-			if [ -f /boot/grub/grub.cfg.new ]; then
-				mv /boot/grub/grub.cfg.new /boot/grub/grub.cfg
-			fi
-		fi
-		if [ ! -f /boot/grub/grub.cfg ]; then	
-			echo "Error: grub.cfg does not exist - running mkconfig again to attempt to fix the issue"
-			grub-mkconfig -o /boot/grub/grub.cfg
-		fi
-	elif [[ $grubType == "2" ]]; then
-		grub-mkconfig -o /boot/efi/EFI/GRUB/grub.cfg
-		if [ -f /boot/efi/EFI/GRUB/grub.cfg.new ]; then
-			mv /boot/efi/EFI/GRUB/grub.cfg.new /boot/efi/EFI/GRUB/grub.cfg
-		fi
-		
-		if [ ! -f /boot/efi/EFI/GRUB/grub.cfg ]; then	
-			echo "Error: grub.cfg does not exist - running mkconfig again to attempt to fix the issue"
-			grub-mkconfig -o /boot/efi/EFI/GRUB/grub.cfg
-		fi
-	fi
-fi
-
-# Clean up
-if [[ $installDesktop == "1" ]]; then
-	cd ..
-	echo
-	echo "* Cleaning up folders for downloaded themes.."
-	rm -rf vertex-theme paper-icon-theme
-fi
-
-echo
-echo "* Cleaning up stage3 install tar.."
+printf "\n"
+printf "* Cleaning up stage3 install tar.. \n"
 rm /stage3-*.tar.bz2*
 
-echo
-echo "Would you be interested in my restricted-iptables script as well? Y/N"
-echo "It is a configurable iptables firewall script meant to make firewalls easier"
-echo "Reference the repo at: https://github.com/jeekkd/restricted-iptables"
-read -r iptablesAnswer
-if [[ $iptablesAnswer == "Y" || $iptablesAnswer == "y" ]]; then
-	confUpdate "net-firewall/iptables"
-	echo
-	git clone https://github.com/jeekkd/restricted-iptables
-	echo
-	echo "Note: Reference README for configuration information and usage, and assure"
-	echo "to read carefully through configuration.sh when doing configuration."
-	echo
-	echo
-	echo "* Adding iptables and ip6tables to OpenRC for boot.."
-	rc-update add iptables default
-	rc-update add ip6tables default
-fi
+for (( ; ; )); do
+	printf "\n"
+	printf "Would you be interested in my restricted-iptables script as well? Y/N \n"
+	printf "It is a configurable iptables firewall script meant to make firewalls easier \n"
+	printf "Reference the repo at: https://github.com/jeekkd/restricted-iptables \n"
+	read -r iptablesAnswer
+	if [[ $iptablesAnswer == "Y" || $iptablesAnswer == "y" ]]; then
+		confUpdate "net-firewall/iptables"
+		printf
+		git clone https://github.com/jeekkd/restricted-iptables
+		printf "\n"
+		printf "Note: Reference README for configuration information and usage, and assure \n"
+		printf "to read carefully through configuration.sh when doing configuration. \n"
+		printf "\n"
+		printf "\n"
+		printf "* Adding iptables and ip6tables to OpenRC for boot.. \n"
+		rc-update add iptables default
+		rc-update add ip6tables default
+	elif [[ $iptablesAnswer == "N" || $iptablesAnswer == "n" ]]; then
+		printf "Skipping installation of restricted-iptables script \n"
+		break
+	else
+		printf "Error: Invalid selection, enter either Y or N \n"
+	fi
+done
 
-echo
-echo "* Complete!"
-echo "Note: remember to set your /etc/fstab to reflect your specific system"
+printf "\n"
+printf "* Complete! \n"
+printf "Note: remember to set your /etc/fstab to reflect your specific system \n"
 

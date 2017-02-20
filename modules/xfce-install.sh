@@ -58,3 +58,8 @@ if [[ $installApplications == "Y" ]] || [[ $installApplications == "y" ]]; then
 	echo "* Enabling global bash completion.."
 	eselect bashcomp enable --global {0..478}
 fi
+
+cd ..
+printf "\n"
+printf "* Cleaning up folders for downloaded themes.. \n"
+rm -rf vertex-theme/ paper-icon-theme/

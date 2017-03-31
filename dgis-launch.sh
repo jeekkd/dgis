@@ -73,14 +73,15 @@ confUpdate() {
 # Example: isInstalled "sys-kernel/genkernel-next" 
 # If the package is not installed it will call confUpdate and install the package
 isInstalled() {
-	package=$1
+	local package=$1
+	local packageTest=
     packageTest=$(equery -q list "$package")
     if [[ -z ${packageTest} ]]; then
 		confUpdate "$package"
     fi
 }
 
-printf "Install Xorg? Y/N"
+printf "Install Xorg? Y/N \n"
 read -r installXorg
 if [[ $installXorg == "Y" ]] || [[ $installXorg == "y" ]]; then	
 	printf
@@ -95,7 +96,8 @@ if [[ $installXorg == "Y" ]] || [[ $installXorg == "y" ]]; then
 		printf "C. Ratpoison \n"
 		printf "D. LXDE \n"
 		printf "E. Xmonad \n"
-		printf "F. Skip this selection \n"
+		printf "F. Gnome \n"
+		printf "G. Skip this selection \n"
 		printf "\n"
 		printf "Enter a selection: \n"
 		read -r option			
@@ -126,11 +128,16 @@ if [[ $installXorg == "Y" ]] || [[ $installXorg == "y" ]]; then
 			break
 		;;
 		[Ff])
+			installDesktop=6
+			printf "Gnome has been selected for the Desktop Environment \n"
+			break
+		;;
+		[Gg])
 			printf "Skipping desktop environment selection.. \n"
 			break
 		;;
 		*)
-			printf "Enter a valid selection from the menu - options include A to E \n"
+			printf "Enter a valid selection from the menu - options include A to G \n"
 		;;	
 		esac 	
     done
@@ -214,6 +221,7 @@ fi
 # Profile selection
 printf "\n"
 printf "* Listing profiles... \n"
+printf "Note: If you chose Gnome as your desktop environment, just now just select a regular desktop profile and later you will be reprompted to select the Gnome profile. \n"
 eselect profile list
 printf "\n"
 printf "Which profile would you like? Type a number: \n"
@@ -268,7 +276,7 @@ for (( ; ; )); do
 	elif [[ $usernameConfirm == "N" || $usernameConfirm == "n" ]]; then
 		printf "No was selected, re-asking for correct username\n"
 	else
-		printf "Error: Enter either the number 1 or 2 as your selection. \n"
+		printf "Error: Enter either the number Y or N as your selection. \n"
 	fi
 done
 
@@ -296,15 +304,44 @@ confUpdate " --deep --with-bdeps=y --newuse --update @world"
 # Setting CPU flags in /etc/portage/make.conf
 printf "* Setting CPU flags in /etc/portage/make.conf \n"
 emerge --oneshot -q app-portage/cpuid2cpuflags
-flags=$(cpuinfo2cpuflags-x86)
+cpuFlags=$(cpuinfo2cpuflags-x86)
 printf " \n" >> /etc/portage/make.conf
 printf "# Supported CPU flags \n" >> /etc/portage/make.conf
-printf "$flags \n" >> /etc/portage/make.conf
+printf "$cpuFlags \n" >> /etc/portage/make.conf
 
 # Getting system basics
 printf "\n"
 printf "* Emerging git, flaggie, dhcpcd... \n"
-confUpdate "dev-vcs/git app-portage/flaggie net-misc/dhcpcd"
+confUpdate "dev-vcs/git app-portage/flaggie net-misc/dhcpcd app-portage/gentoolkit"
+
+# Install and build kernel
+printf "\n"
+printf "* Cloning repo for my gentoo_kernel_build script to build the kernel \n"
+printf "\n"
+git clone https://github.com/jeekkd/gentoo-kernel-build.git && cd gentoo-kernel-build
+if [ $? -eq 0 ]; then	
+	chmod 770 build_kernel.sh
+	bash build_kernel.sh
+	if [ $? -gt 0 ]; then	
+		for (( ; ; )); do
+			printf "Error: build_kernel.sh failed - try again? Y/N \n"
+			read -r kernelBuildRetry
+			if [[ $kernelBuildRetry == "Y" ]] || [[ $kernelBuildRetry == "y" ]]; then	
+				bash build-kernel.sh
+			elif [[ $kernelBuildRetry == "N" ]] || [[ $kernelBuildRetry == "n" ]]; then	
+				printf "No selected, skipping retrying kernel build. \n"
+				break
+			else
+				printf "Error: Invalid selection, enter either Y or N \n"
+			fi
+		done
+	else
+		cd ..
+	fi
+else
+	printf "Error: git clone failed for retrieving kernel build script from the following location https://github.com/jeekkd/gentoo-kernel-build \n"
+	exit 1
+fi
 
 # Locale configuration
 printf "\n"
@@ -329,7 +366,7 @@ for (( ; ; )); do
 	printf "* Do you need to edit hwclock options?. Select Y/N \n"
 	read -r editHwclock
 	if [[ $editHwclock == "Y" || $editHwclock == "y" ]]; then
-		nano -w /etc/conf.d/keymaps
+		nano -w /etc/conf.d/hwclock
 		break
 	elif [[ $editHwclock == "N" || $editHwclock == "n" ]]; then
 		printf "Skipping editing hwclock settings \n"
@@ -344,13 +381,13 @@ done
 # meant to encompass a variety of setups for ease of use to the user
 if [[ $installXorg == "Y" ]] || [[ $installXorg == "y" ]]; then	
 	printf " \n" >> /etc/portage/make.conf
-	printf "# Video and input devices for Xorg" >> /etc/portage/make.conf
-	printf "VIDEO_CARDS=\"radeon radeonsi nouveau intel\"" >> /etc/portage/make.conf
-	printf "INPUT_DEVICES=\"keyboard mouse synaptics evdev\"" >> /etc/portage/make.conf
-	env-update && source /etc/profile && export PS1="(chroot) $PS1" 
+	printf "# Video and input devices for Xorg \n" >> /etc/portage/make.conf
+	printf "VIDEO_CARDS=\"amndgpu fbdev radeon radeonsi nouveau intel\" \n" >> /etc/portage/make.conf
+	printf "INPUT_DEVICES=\"keyboard mouse synaptics evdev\" \n" >> /etc/portage/make.conf
+	env-update && source /etc/profile
 	printf "\n"
 	printf "* Xorg installation.. \n"
-	confUpdate "x11-base/xorg-drivers x11-drivers/xf86-video-fbdev x11-drivers/xf86-video-vesa"
+	emerge --changed-use --deep @world
 fi
 
 # Installing desktop environment or window manager selection
@@ -364,49 +401,22 @@ elif [[ $installDesktop == "4" ]]; then
 	import lxde-install
 elif [[ $installDesktop == "5" ]]; then
 	import xmonad-install
-fi
-
-# Install and build kernel
-printf "\n"
-printf "* Cloning repo for my gentoo_kernel_build script to build the kernel \n"
-printf "\n"
-git clone https://github.com/jeekkd/gentoo-kernel-build.git && cd gentoo-kernel-build
-if [ $? -eq 0 ]; then	
-	chmod 770 build_kernel.sh
-	bash build_kernel.sh
-	if [ $? -gt 0 ]; then	
-		for (( ; ; )); do
-			printf "Error: build_kernel.sh failed - try again? Y/N \n"
-			read -r kernelBuildRetry
-			if [[ $kernelBuildRetry == "Y" ]] || [[ $kernelBuildRetry == "y" ]]; then	
-				bash build_kernel.sh
-			elif [[ $kernelBuildRetry == "N" ]] || [[ $kernelBuildRetry == "n" ]]; then	
-				printf "No selected, skipping retrying kernel build. \n"
-				break
-			else
-				printf "Error: Invalid selection, enter either Y or N \n"
-			fi
-		done
-	else
-		cd ..
-	fi
-else
-	printf "Error: git clone failed for retrieving kernel build script from the following location https://github.com/jeekkd/gentoo-kernel-build \n"
-	exit 1
+elif [[ $installDesktop == "6" ]]; then
+	import gnome-install
 fi
 
 printf "* Beginning to emerge helpful and necessary programs such as hwinfo, usbutils, sudo, rsyslog... \n"
 flaggie app-admin/logrotate +acl
 flaggie app-admin/logrotate +cron
 
-confUpdate "sys-process/fcron app-admin/logrotate sys-apps/hwinfo app-admin/sudo app-admin/rsyslog net-firewall/iptables app-portage/gentoolkit sys-apps/usbutils"
+confUpdate "sys-process/fcron app-admin/logrotate sys-apps/hwinfo app-admin/sudo app-admin/rsyslog net-firewall/iptables sys-apps/usbutils"
 if [ $? -gt 0 ]; then	
     usermod -aG wheel "$inputUser"
     usermod -aG cron "$inputUser"
     usermod -aG cron root
 fi
     
-printf
+printf "\n"
 printf "* Adding startup items to OpenRC for boot.. \n"
 rc-update add consolekit default
 rc-update add xdm default
@@ -442,21 +452,21 @@ for (( ; ; )); do
 	printf "Reference the repo at: https://github.com/jeekkd/restricted-iptables \n"
 	read -r iptablesAnswer
 	if [[ $iptablesAnswer == "Y" || $iptablesAnswer == "y" ]]; then
-		confUpdate "net-firewall/iptables"
+		isInstalled "net-firewall/iptables"
 		printf
 		git clone https://github.com/jeekkd/restricted-iptables
 		printf "\n"
-		printf "Note: Reference README for configuration information and usage, and assure \n"
-		printf "to read carefully through configuration.sh when doing configuration. \n"
-		printf "\n"
+		printf "Note: Reference README for configuration information and usage, and assure to read carefully through configuration.sh when doing configuration. \n"
 		printf "\n"
 		printf "* Adding iptables and ip6tables to OpenRC for boot.. \n"
 		rc-update add iptables default
 		rc-update add ip6tables default
 	elif [[ $iptablesAnswer == "N" || $iptablesAnswer == "n" ]]; then
+		printf "\n"
 		printf "Skipping installation of restricted-iptables script \n"
 		break
 	else
+		printf "\n"
 		printf "Error: Invalid selection, enter either Y or N \n"
 	fi
 done

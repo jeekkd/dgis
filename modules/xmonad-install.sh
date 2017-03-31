@@ -21,6 +21,7 @@ firstUser=$(grep "1000" /etc/passwd | cut -f 1 -d :)
 echo "* Emerging urxvt and firefox for something to start off from..."
 confUpdate "rxvt-unicode firefox-bin"
 
+mkdir -p /home/"$firstUser"/.xmonad/
 echo
 echo "* Setting xmonad.hs..."
 echo "import XMonad

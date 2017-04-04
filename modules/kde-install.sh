@@ -5,6 +5,8 @@ echo " " >> /etc/portage/make.conf
 echo "# Global USE flag declaration" >> /etc/portage/make.conf
 echo "USE=\"qt5 -qt4 X dbus jpeg lock session startup-notification udev -gnome -systemd -minimal alsa pam tcpd ssl\"" >> /etc/portage/make.conf
 
+emerge --deep --with-bdeps=y --changed-use --update -q @world
+
 # Prepare for emerge
 flaggie net-libs/libvncserver +ssl
 flaggie net-libs/libvncserver +threads

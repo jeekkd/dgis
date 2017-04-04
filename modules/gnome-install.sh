@@ -4,17 +4,7 @@ firstUser=$(grep "1000" /etc/passwd | cut -f 1 -d :)
 flaggie sys-apps/busybox -static
 flaggie virtual/imagemagick-0 +png
 
-echo "[dantrell-gnome]
-
-# Dantrell B.'s Gentoo Overlay for GNOME (generic)
-# Maintainer: Dantrell B. (email: see CONTRIBUTING.md in main GitHub project)
-# Homepage: https://github.com/dantrell/gentoo-project-gnome-without-systemd
-
-location = /usr/local/portage/dantrell-gnome
-sync-type = git
-sync-uri = https://github.com/dantrell/gentoo-overlay-dantrell-gnome.git
-priority = 150
-auto-sync = yes" > /etc/portage/repos.conf/dantrell-gnome.conf
+cp configs/dantrell-gnome.conf /etc/portage/repos.conf/
 
 isInstalled "dev-vcs/git"
 

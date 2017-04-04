@@ -81,10 +81,18 @@ isInstalled() {
     fi
 }
 
+printf "\n"
+printf "============================================================= \n"
+printf "Dgis - Daultons Gentoo Installer Script \n"
+printf "https://github.com/jeekkd/dgis \n"
+printf "============================================================= \n"
+printf "\n"
+printf "If you run into any problems, please open an issue so it can fixed. Thanks! \n"
+printf "\n"
 printf "Install Xorg? Y/N \n"
 read -r installXorg
 if [[ $installXorg == "Y" ]] || [[ $installXorg == "y" ]]; then	
-	printf
+	printf "\n"
 	while true ; do
 		printf "\n"
 		printf "=================================== \n" 
@@ -137,7 +145,7 @@ if [[ $installXorg == "Y" ]] || [[ $installXorg == "y" ]]; then
 			break
 		;;
 		*)
-			printf "Enter a valid selection from the menu - options include A to G \n"
+			printf "Error: enter a valid selection from the menu - options include A to G \n"
 		;;	
 		esac 	
     done
@@ -153,37 +161,50 @@ if [[ $installXorg == "Y" ]] || [[ $installXorg == "y" ]]; then
 fi
 
 # Set DNS server
-printf "\n"
-printf "Would you like to use the default Google 8.8.8.8 nameserver (Press 1) \n"
-printf "or enter one of your own (Press 2)? \n"
-read -r nameserverOptions
-if [[ $nameserverOptions == "1" ]]; then
-	printf "nameserver $defaultNameserver\n" > /etc/resolv.conf
-	if [ $? -gt 0 ]; then
-		printf "Error: Failed to set nameserver to $nameServer\n"
-		exit 1
-	fi	
-elif [[ $nameserverOptions == "2" ]]; then
-	printf "Enter a nameserver in dotted decimal format such as 8.8.8.8\n"
-	read -r enteredNameserver
-	printf "nameserver $enteredNameserver\n" > /etc/resolv.conf
-	if [ $? -gt 0 ]; then
-		printf "Error: Failed to set nameserver to $answer..\n"
-		exit 1
+for (( ; ; )); do
+	printf "\n"
+	printf "Press 1 - Use the default Google 8.8.8.8 nameserver \n"
+	printf "Press 2 - Enter one of your own \n"
+	read -r nameserverOptions
+	if [[ $nameserverOptions == "1" ]]; then
+		printf "nameserver $defaultNameserver\n" > /etc/resolv.conf
+		if [ $? -gt 0 ]; then
+			printf "Error: Failed to set nameserver to $nameServer\n"
+			exit 1
+		fi
+		break	
+	elif [[ $nameserverOptions == "2" ]]; then
+		for (( ; ; )); do
+			printf "\n"
+			printf "Enter a nameserver in dotted decimal format such as 8.8.8.8\n"
+			read -r enteredNameserver
+			printf "\n"
+			printf "Confirm that $enteredNameserver is the connect nameserver. Press Y/N \n"
+			read -r nameserverConfirm
+			if [[ $nameserverConfirm == "Y" || $nameserverConfirm == "y" ]]; then
+				printf "nameserver $enteredNameserver\n" > /etc/resolv.conf
+				if [ $? -gt 0 ]; then
+					printf "Error: Failed to set nameserver to $enteredNameserver..\n"
+					exit 1
+				fi
+				break
+			elif [[ $nameserverConfirm == "N" || $nameserverConfirm == "n" ]]; then
+				printf "No was selected, re-asking for the correct nameserver \n"
+			else
+				printf "Error: Enter either the letters Y or N as your selection. \n"
+			fi
+		done
+		break
+	else
+		printf "Error: Enter either the number 1 or 2 as your selection.\n"
 	fi
-else
-	printf "Error: Enter either the number 1 or 2 as your selection.\n"
-fi
+done
 
 # Configuring system basics
 mkdir -p /etc/portage/repos.conf/
 
 if [ ! -f /etc/portage/repos.conf/gentoo.conf ]; then
-	printf "[gentoo]\n" >> /etc/portage/repos.conf/gentoo.conf
-	printf "location = /usr/portage\n" >> /etc/portage/repos.conf/gentoo.conf
-	printf "sync-type = rsync\n" >> /etc/portage/repos.conf/gentoo.conf
-	printf "sync-uri = rsync://rsync.gentoo.org/gentoo-portage\n" >> /etc/portage/repos.conf/gentoo.conf
-	printf "auto-sync = yes\n" >> /etc/portage/repos.conf/gentoo.conf
+	cp "$script_dir"/configs/gentoo.conf /etc/portage/repos.conf/
 fi
 
 if [ -f /etc/portage/repos.conf/gentoo.conf ]; then
@@ -194,7 +215,7 @@ else
 fi
 
 # Adding make.conf at /etc/portage
-cp make.conf /etc/portage/
+cp "$script_dir"/configs/make.conf /etc/portage/
 if [ -f /etc/portage/make.conf ]; then
 	chmod 644 /etc/portage/make.conf
 	detectCores=$(cat /proc/cpuinfo | awk '/^processor/{print $3}' | tail -1)
@@ -210,7 +231,7 @@ fi
 # Updating portage tree with webrsync
 printf "\n"
 printf "* Syncing then emerging portage.. \n"
-emerge-webrsync
+emerge --sync
 if [ $? -eq 0 ]; then
 	emerge --oneshot -q sys-apps/portage
 else
@@ -276,7 +297,7 @@ for (( ; ; )); do
 	elif [[ $usernameConfirm == "N" || $usernameConfirm == "n" ]]; then
 		printf "No was selected, re-asking for correct username\n"
 	else
-		printf "Error: Enter either the number Y or N as your selection. \n"
+		printf "Error: Enter either the letters Y or N as your selection. \n"
 	fi
 done
 
@@ -344,26 +365,36 @@ else
 fi
 
 # Locale configuration
-printf "\n"
-printf "* Locale selection.. \n"
-nano -w /etc/locale.gen 
-locale-gen 
-localeUtf=$(eselect locale list | awk '/utf8/{print $1}' | sed 's/.*\[//;s/\].*//;')
-localeC=$(eselect locale list | awk '/C/{print $1}' | sed 's/.*\[//;s/\].*//;')
-if [[ $localeUtf -ge 1 && $localeUtf -le 9 ]]; then	
-	eselect locale set "$localeUtf"
-else
-	eselect locale set "$localeC"
-	if [ $? -gt 0 ]; then	
-		eselect locale set 1
+for (( ; ; )); do
+	printf "\n"
+	printf "\n"
+	printf "* Locale selection.. \n"
+	nano -w /etc/locale.gen 
+	locale-gen 
+	eselect locale list
+	printf "\n"
+	printf "Enter the number of your selection: \n"
+	read -r localeSelection
+	localeNumber=$(eselect locale list | cut -f 3 -d " " | grep "$localeSelection")
+	localeSelection=$(eselect locale list | grep "$localeNumber" | cut -f 6 -d " ")
+	printf "\n"
+	printf "Confirm that $localeSelection is the desired locale. Press Y/N \n"
+	read -r localeConfirm
+	if [[ $localeConfirm == "Y" || $localeConfirm == "y" ]]; then
+		eselect locale set "$localeSelection"
+		. /etc/profile
+		break
+	elif [[ $localeConfirm == "N" || $localeConfirm == "n" ]]; then
+		printf "No was selected, re-asking for correct locale \n"
+	else
+		printf "Error: Invalid selection, enter either Y or N \n"
 	fi
-fi 
-. /etc/profile
+done
 
 # Hardware clock configuration
 for (( ; ; )); do
 	printf "\n"
-	printf "* Do you need to edit hwclock options?. Select Y/N \n"
+	printf "* Do you need to edit hwclock options? Select Y/N \n"
 	read -r editHwclock
 	if [[ $editHwclock == "Y" || $editHwclock == "y" ]]; then
 		nano -w /etc/conf.d/hwclock
@@ -380,6 +411,8 @@ done
 # Add or remove contents of VIDEO_CARDS and INPUT_DEVICES as necessary, this current configuration is
 # meant to encompass a variety of setups for ease of use to the user
 if [[ $installXorg == "Y" ]] || [[ $installXorg == "y" ]]; then	
+	flaggie sys-apps/busybox -static
+	isInstalled "sys-apps/busybox"
 	printf " \n" >> /etc/portage/make.conf
 	printf "# Video and input devices for Xorg \n" >> /etc/portage/make.conf
 	printf "VIDEO_CARDS=\"amndgpu fbdev radeon radeonsi nouveau intel\" \n" >> /etc/portage/make.conf
@@ -387,7 +420,7 @@ if [[ $installXorg == "Y" ]] || [[ $installXorg == "y" ]]; then
 	env-update && source /etc/profile
 	printf "\n"
 	printf "* Xorg installation.. \n"
-	emerge --changed-use --deep @world
+	emerge --deep --with-bdeps=y --changed-use --update -q @world
 fi
 
 # Installing desktop environment or window manager selection
@@ -453,7 +486,7 @@ for (( ; ; )); do
 	read -r iptablesAnswer
 	if [[ $iptablesAnswer == "Y" || $iptablesAnswer == "y" ]]; then
 		isInstalled "net-firewall/iptables"
-		printf
+		printf "\n"
 		git clone https://github.com/jeekkd/restricted-iptables
 		printf "\n"
 		printf "Note: Reference README for configuration information and usage, and assure to read carefully through configuration.sh when doing configuration. \n"
@@ -461,6 +494,7 @@ for (( ; ; )); do
 		printf "* Adding iptables and ip6tables to OpenRC for boot.. \n"
 		rc-update add iptables default
 		rc-update add ip6tables default
+		break
 	elif [[ $iptablesAnswer == "N" || $iptablesAnswer == "n" ]]; then
 		printf "\n"
 		printf "Skipping installation of restricted-iptables script \n"

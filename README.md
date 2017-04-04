@@ -58,16 +58,16 @@ cd /mnt/gentoo
 - Untar your stage3 of choice as you normally would. [Link to Gentoo downloads](https://www.gentoo.org/downloads/)
 
 ```
-tar xvjpf stage3-*.tar.bz2 --xattrs
+tar xvjpf stage3-*.tar.bz2 --xattrs --numeric-owner
 ```
 
-- Lets get the source
+- Lets get the scripts
 
 ```
 git clone https://github.com/jeekkd/dgis.git
 ```
 
-- Create and enter a chroot
+- Create and enter the chroot
 
 ```
 mount -t proc proc /mnt/gentoo/proc
@@ -81,14 +81,14 @@ source /etc/profile
 export PS1="(chroot) $PS1"
 ```
 
-- This will make the script readable, writable, and executable to root and your user. 
+- This will make the scripts readable, writable, and executable to root and your user.
 
 ```
 cd dgis
 chmod 770 -R dgis-launch.sh modules/
 ```
 
-Then launch the script by doing the following as root:
+Then launch the script by doing the following as root
 
 ```
 bash dgis-launch.sh

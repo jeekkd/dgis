@@ -6,8 +6,7 @@ configured with Gentoo itself, a kernel, bootloader, some necessary applications
 flexibility to be prompted for desktop environment or window manager (or none at all if you choose), display manager, along with locale, time zone, usernames, passwords, hostname and other user specific selections.
 
 The intended use is that first your partitioning is done as you wish, you run the script and it handles
-everything up the point of configuring the fstab or any additional options your grub configuration may
-require. View the top of `dgis-launch.sh` if things are not clear.
+everything up the point of configuring the fstab. View the top of `dgis-launch.sh` if things are not clear.
 
 Supported Desktop Environments and Window Managers
 ===
@@ -37,7 +36,7 @@ These two projects can of course be used independently of Dgis, so consider chec
 How to use
 ===
 
-- Mount your root at /mnt/gentoo
+- Mount your partitioned root filesystem at /mnt/gentoo
 
 ```
 mount /dev/sda1 /mnt/gentoo
@@ -55,37 +54,17 @@ mount /dev/sda1 /mnt/gentoo
 cd /mnt/gentoo
 ```
 
-- Untar your stage3 of choice as you normally would. [Link to Gentoo downloads](https://www.gentoo.org/downloads/)
-
-```
-tar xvjpf stage3-*.tar.bz2 --xattrs --numeric-owner
-```
-
 - Lets get the scripts
 
 ```
 git clone https://github.com/jeekkd/dgis.git
 ```
 
-- Create and enter the chroot
-
-```
-mount -t proc proc /mnt/gentoo/proc
-mount --rbind /sys /mnt/gentoo/sys
-mount --make-rslave /mnt/gentoo/sys
-mount --rbind /dev /mnt/gentoo/dev
-mount --make-rslave /mnt/gentoo/dev
-
-chroot /mnt/gentoo /bin/bash
-source /etc/profile
-export PS1="(chroot) $PS1"
-```
-
 - This will make the scripts readable, writable, and executable to root and your user.
 
 ```
 cd dgis
-chmod 770 -R dgis-launch.sh modules/
+chmod 770 -R dgis-launch.sh chroot-commands.sh modules/
 ```
 
 Then launch the script by doing the following as root
@@ -94,17 +73,23 @@ Then launch the script by doing the following as root
 bash dgis-launch.sh
 ```
 
+> **Note:** 
+> Remember to configure your /etc/fstab file before rebooting
 
 Pitfalls
 ===
 
+- amd64 (x86_x64) only, additional architectures could be added
+	- If `stage3Download()` in `dgis-launch.sh` were changed to accommodate other architectures, and the `CHOST` in make.conf were dynamically allocated 
+	- Part of the issue is additional testing overhead.
+
 - OpenRC only at this time unless there becomes some demand for systemd.
+	- Part of the issue is additional testing overhead, but with demand I could implement it.
 
 - Must assume a variety of input and video devices to support a wider audience of users hardware, feel free to add or remove from VIDEO_CARDS and INPUT_DEVICES at approximately line 300 in `dgis-launch.sh`.
 
-- Supports a limited number of desktop environments and window managers at this moment (See current list above). Requests and pull requests are accepted, see the contributing section or open an issue with your request.
-
 - X only currently, there is no Wayland support yet - it could be supported if requested.
+	- Part of the issue is additional testing overhead, but with demand I could implement it.
 
 Contributing
 ===

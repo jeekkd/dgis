@@ -69,7 +69,9 @@ function finish {
 	printf "\n"
 	printf "* Cleaning up stage3 install tar.. \n"
 	rm /stage3-*.tar.bz2*
+	rm /.DIGESTS.asc*
 	rm /*DIGESTS.asc*
+	rm /.tar.gz
 }
 trap finish EXIT
 
@@ -464,6 +466,11 @@ for (( ; ; )); do
 		printf "Error: Invalid selection, enter either Y or N \n"
 	fi
 done
+
+# Run user defined script post-install-configuration.sh if it exists
+if [ -f "$script_dir"/modules/post-install-configuration.sh ]; then
+	import post-install-configuration
+fi
 
 for (( ; ; )); do
 	printf "\n"

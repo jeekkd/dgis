@@ -76,6 +76,29 @@ bash dgis-launch.sh
 > **Note:** 
 > Remember to configure your /etc/fstab file before rebooting
 
+Extending usage
+===
+
+If you were to want to have a series of extra configuration steps occur alongside the script, create
+`post-install-configuration.sh` within the modules directory. This script, if it is created, will
+be ran near the end of the installation. Its contents will be ran as any regular Bash script would.
+
+For example, if you were to use the Dgis script occassionally for a re-install you could keep a 
+`post-install-configuration.sh` script around with an emerge in it that installs your necessary 
+software and does any extra personalizations.
+
+```
+#!/usr/bin/env bash
+emerge --ask -q net-irc/hexchat
+
+# Paper-icon-theme by snwh
+# https://github.com/snwh/paper-icon-theme
+git clone https://github.com/snwh/paper-icon-theme && cd paper-icon-theme || exit
+./autogen.sh
+make -s
+make install
+```
+
 Pitfalls
 ===
 

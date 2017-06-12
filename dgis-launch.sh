@@ -52,33 +52,9 @@ function stage3Download() {
 	LATEST=$(wget --quiet http://distfiles.gentoo.org/releases/amd64/autobuilds/latest-stage3-amd64.txt -O-| tail -n 1 | cut -d " " -f 1)
 	BASENAME=$(basename "$LATEST")
 	wget -q --show-progress "http://distfiles.gentoo.org/releases/amd64/autobuilds/$LATEST" -O "$DESTINATION/$BASENAME"
-	wget -q --show-progress "http://distfiles.gentoo.org/releases/amd64/autobuilds/$LATEST.DIGESTS.asc" -O "$DESTINATION/$BASENAME.DIGESTS.asc"
 		
 	BASENAME=$(basename "$STAGE3")
-	wget -q --show-progress "$STAGE3" -O "$DESTINATION/$BASENAME.tar.gz"
-	wget -q --show-progress "$STAGE3.DIGESTS.asc" -O "$DESTINATION/$BASENAME.DIGESTS.asc"
-	
-	printf "\n"
-	printf "Verifying the cryptographic signature of the stage3 hashes...  \n"
-	gpg --keyserver hkps.pool.sks-keyservers.net --recv-keys 0xBB572E0E2D182910 >/dev/null 2>/dev/null
-	gpg --verify "$DESTINATION/stage3-"*".tar.bz2.DIGESTS.asc" >/dev/null 2>/dev/null
-	if [ $? -ne 0 ]; then		
-		printf "Error: the cryptographic signature of \"$DESTINATION/stage3-"*".tar.bz2.DIGESTS.asc\" could not be verified! \n"
-		exit 1
-	else
-		printf "OK \n"
-		printf "\n"
-	fi
-	
-	printf "Verifying the hash of the stage3 tarball... \n"
-	grep $(sha512sum "$DESTINATION/stage3-"*".tar.bz2") "$DESTINATION/stage3-"*".tar.bz2.DIGESTS.asc" >/dev/null
-	if [ $? -ne 0 ]; then
-		printf "Error: the downloaded file \"$DESTINATION/stage3-"*".tar.bz2\" does not match the sha512sum hash in \"$DESTINATION/stage3-"*".tar.bz2.DIGESTS.asc\" \n"
-		exit 1
-	else
-		printf "OK \n"
-		printf "\n"
-	fi
+	wget -q --show-progress "$STAGE3" -O "$DESTINATION/$BASENAME"
 }
 
 printf "\n"

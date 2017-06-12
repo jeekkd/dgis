@@ -17,6 +17,7 @@ Supported Desktop Environments and Window Managers
 - LXDE
 - Xmonad
 - Gnome
+- Lumina
 
 > **Note:** 
 > There are more to come, but open an issue to request a specific one or see the Contributing section to

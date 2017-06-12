@@ -8,7 +8,12 @@ cp configs/dantrell-gnome.conf /etc/portage/repos.conf/
 
 isInstalled "dev-vcs/git"
 
-emaint sync -a
+if [ -f /etc/portage/repos.conf/dantrell-gnome.conf ]; then
+	emaint sync -a
+else
+	echo "Error: the file dantrell-gnome.conf does not exist at /etc/portage/repos.conf/"
+	exit  1
+fi
 
 # Profile selection
 printf "\n"
@@ -18,13 +23,13 @@ printf "\n"
 printf "Which profile would you like? Type a number: \n"
 read -r inputNumber
 eselect profile set "$inputNumber"
-env-update && source /etc/profile && export PS1="(chroot) $PS1" 
 
 printf "\n"
 echo "* Setting global USE flags in make.conf"
 echo " " >> /etc/portage/make.conf
 echo "# Global USE flag declaration" >> /etc/portage/make.conf
-echo "USE=\"X dbus jpeg lock session startup-notification udev gnome -systemd -minimal alsa pam tcpd ssl\"" >> /etc/portage/make.conf
+echo "USE=\"X dbus jpeg lock session startup-notification udev gnome systemd -minimal alsa pam tcpd ssl\"" >> /etc/portage/make.conf
+env-update && source /etc/profile && export PS1="(chroot) $PS1" 
 
 printf "\n"
 echo "* Installing Gnome desktop environment.."

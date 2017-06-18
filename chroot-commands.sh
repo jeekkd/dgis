@@ -73,6 +73,42 @@ function finish {
 }
 trap finish EXIT
 
+# selectProfile()
+# Profile selection function to select the portage profile for your system
+function selectProfile() {
+	while true; do
+		printf "\n"
+		printf "* Listing profiles... \n"
+		printf "Note: If you chose Gnome as your desktop environment, now just select a regular, non-systemd, desktop profile and later you will be reprompted to select one of the Dantrell Gnome profiles. \n"
+		printf "\n"
+		eselect profile list
+		printf "\n"
+		printf "Which profile would you like? Type a number: \n"
+		read -r profileNumber
+		if [ "$profileNumber" -ge "1" ] && [ "$profileNumber" -le "40" ]; then
+			sedProfileNumber=$((profileNumber + 1))
+			selectedProfile=$(eselect profile list | sed -n "$sedProfileNumber"p)
+			printf "\n"
+			printf "Confirm that $selectedProfile is the desired profile. Enter [y/n] \n"
+			read -r profileConfirm
+			if [[ $profileConfirm == "Y" || $profileConfirm == "y" ]]; then
+				eselect profile set "$profileNumber"
+				env-update && source /etc/profile && export PS1="(chroot) $PS1"
+				break
+			elif [[ $profileConfirm == "N" || $profileConfirm == "n" ]]; then
+				printf "\n"
+				printf "No was selected, re-asking for correct profile \n"
+			else
+				printf "\n"
+				printf "Error: Invalid selection, Enter [y/n] \n"
+			fi
+		else
+			printf "\n"
+			printf "Error: Please enter the numbers 1 to 40 as your input. Anything else is an invalid option. \n"
+		fi
+	done
+}
+
 printf "\n"
 printf "Install Xorg? Y/N \n"
 read -r installXorg
@@ -214,7 +250,7 @@ if [ -f /etc/portage/make.conf ]; then
 	detectCores=$(cat /proc/cpuinfo | awk '/^processor/{print $3}' | tail -1)
 	printf " \n" >> /etc/portage/make.conf
 	printf "# Make concurrency level for emerges \n" >> /etc/portage/make.conf
-	MAKEOPTS="-j$detectCores\n" >> /etc/portage/make.conf
+	printf "MAKEOPTS=\"-j$detectCores\" \n" >> /etc/portage/make.conf
 	env-update && source /etc/profile && export PS1="(chroot) $PS1" 
 else
 	printf "Error: make.conf does not exist in /etc/portage/ - exiting \n"
@@ -223,7 +259,7 @@ fi
 
 # Updating portage tree
 printf "\n"
-printf "* Syncing.. Be patient this couple take a couple minutes/ \n"
+printf "* Syncing.. Be patient this could take a of couple minutes \n"
 emerge --sync -q
 if [ $? -eq 0 ]; then
 	printf "* Emerging portage and gentoolkit.. \n"
@@ -234,24 +270,8 @@ else
 	exit 1
 fi
 
-# Profile selection
-while true; do
-	printf "\n"
-	printf "* Listing profiles... \n"
-	printf "Note: If you chose Gnome as your desktop environment, just now just select a regular desktop profile and later you will be reprompted to select the Gnome profile. \n"
-	eselect profile list
-	printf "\n"
-	printf "Which profile would you like? Type a number: \n"
-	read -r inputNumber
-	if [ "$inputNumber" -ge "1" ] && [ "$inputNumber" -le "40" ]; then
-		eselect profile set "$inputNumber"
-		env-update && source /etc/profile && export PS1="(chroot) $PS1" 
-		break
-	else
-		printf "Error: Please enter the numbers 1 to 40 as your input. Anything else is an invalid option. \n"
-		printf "\n"
-	fi
-done
+# Profile selection menu
+selectProfile
 
 # Getting time zone data
 for (( ; ; )); do
@@ -397,6 +417,13 @@ for (( ; ; )); do
 	fi
 done
 
+# Setting CPU flags in /etc/portage/make.conf
+printf "* Setting CPU flags in /etc/portage/make.conf \n"
+cpuFlags=$(cpuinfo2cpuflags-x86)
+printf " \n" >> /etc/portage/make.conf
+printf "# Supported CPU flags \n" >> /etc/portage/make.conf
+printf "$cpuFlags \n" >> /etc/portage/make.conf
+
 # Updating world
 printf "\n"
 printf "* Updating world.. \n"
@@ -410,13 +437,6 @@ if [ $? -gt 0 ]; then
 	printf "Error: revdep-rebuild failed - exiting \n"
 	exit 1
 fi
-
-# Setting CPU flags in /etc/portage/make.conf
-printf "* Setting CPU flags in /etc/portage/make.conf \n"
-cpuFlags=$(cpuinfo2cpuflags-x86)
-printf " \n" >> /etc/portage/make.conf
-printf "# Supported CPU flags \n" >> /etc/portage/make.conf
-printf "$cpuFlags \n" >> /etc/portage/make.conf
 
 # Getting system basics
 printf "\n"
@@ -466,6 +486,7 @@ if [[ $installXorg == "Y" ]] || [[ $installXorg == "y" ]]; then
 	printf "\n"
 	printf "* Xorg installation.. \n"
 	emerge --deep --with-bdeps=y --changed-use --update -q @world
+	confUpdate "x11-base/xorg-server"
 fi
 
 # Installing desktop environment or window manager selection
@@ -509,10 +530,8 @@ rc-update add fcron default
 
 if [[ $firmwareAnswer == "Y" || $firmwareAnswer == "y" ]]; then
 	confUpdate "sys-kernel/linux-firmware"
-	break
 elif [[ $firmwareAnswer == "N" || $firmwareAnswer == "n" ]]; then
 	printf "No was selected, skipping linux-firmware installation. \n"
-	break
 else
 	printf "Error: Invalid selection, Enter [y/n] \n"
 fi

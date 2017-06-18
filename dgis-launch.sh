@@ -73,6 +73,8 @@ if [ -z "$isRootMounted" ]; then
 else
 	cd /mnt/gentoo
 	stage3Download
-	tar xvjpf stage3-*.tar.bz2 --xattrs --numeric-owner
+	printf "\n"
+	printf "Extracting stage 3 tarball... \n"
+	tar xjpf stage3-*.tar.bz2 --xattrs --numeric-owner
 	mountChroot
 fi

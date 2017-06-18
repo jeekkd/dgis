@@ -1,13 +1,10 @@
 #!/usr/bin/env bash
 
 firstUser=$(grep "1000" /etc/passwd | cut -f 1 -d :)
-flaggie sys-apps/busybox -static
-flaggie virtual/imagemagick-0 +png
-
-cp configs/dantrell-gnome.conf /etc/portage/repos.conf/
 
 isInstalled "dev-vcs/git"
 
+cp configs/dantrell-gnome*.conf /etc/portage/repos.conf/
 if [ -f /etc/portage/repos.conf/dantrell-gnome.conf ]; then
 	emaint sync -a
 else
@@ -15,35 +12,44 @@ else
 	exit  1
 fi
 
-# Profile selection
-printf "\n"
-printf "* Listing profiles... \n"
-eselect profile list
-printf "\n"
-printf "Which profile would you like? Type a number: \n"
-read -r inputNumber
-eselect profile set "$inputNumber"
+# Profile selection menu
+selectProfile
+
+# Prepare for emerge
+flaggie media-libs/mesa +gles2
+flaggie sys-apps/busybox -static
+flaggie media-plugins/alsa-plugins +pulseaudio
+flaggie x11-base/xorg-server +glamor
+flaggie x11-libs/libdrm +video_cards_amdgpu
+echo -e "# required for GNOME\n>=media-plugins/grilo-plugins-0.2.13 upnp-av" >> /etc/portage/package.use/grilo-plugins
+echo -e "# required for GNOME\n>=www-servers/apache-2.2.31 apache2_mpms_prefork" >> /etc/portage/package.use/apache
+echo -e "# required for GNOME\n>=net-fs/samba-4.2.14 client" >> /etc/portage/package.use/samba
+echo -e "# required for GNOME\n>=sys-libs/ntdb-1.0-r1 python" >> /etc/portage/package.use/ntdb
+echo -e "# required for GNOME\n>=sys-libs/tdb-1.3.8 python" >> /etc/portage/package.use/tdb
+echo -e "# required for GNOME\n>=sys-libs/tevent-0.9.28 python" >> /etc/portage/package.use/tevent
 
 printf "\n"
 echo "* Setting global USE flags in make.conf"
 echo " " >> /etc/portage/make.conf
 echo "# Global USE flag declaration" >> /etc/portage/make.conf
-echo "USE=\"X dbus jpeg lock session startup-notification udev gnome systemd -minimal alsa pam tcpd ssl\"" >> /etc/portage/make.conf
+echo "USE=\"X -gt4 -qt5 -kde dbus jpeg lock session startup-notification udev gnome networkmanager -systemd -minimal alsa pam tcpd ssl\"" >> /etc/portage/make.conf
 env-update && source /etc/profile && export PS1="(chroot) $PS1" 
 
 printf "\n"
 echo "* Installing Gnome desktop environment.."
-emerge --deep --with-bdeps=y --changed-use --update -q --verbose @world
-emerge -q --keep-going gnome-base/gnome
+confUpdate "--deep --with-bdeps=y --changed-use --update -q @world"
+confUpdate "media-sound/alsa-utils"
+confUpdate "gnome-base/gnome"
 
 printf "\n"
-echo "* Changing default display manager to GDM"
+printf "* Changing default display manager to GDM \n"
 sed -i 's/xdm/gdm/g' /etc/conf.d/xdm
 
 printf "\n"
 printf "* Adding startup items to OpenRC for boot.. \n"
 rc-update add acpid default
 rc-update add NetworkManager default
+rc-update add alsasound boot
 rc-update del dhcpcd default
 
 usermod -aG plugdev "$firstUser"

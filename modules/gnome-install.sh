@@ -21,6 +21,9 @@ flaggie sys-apps/busybox -static
 flaggie media-plugins/alsa-plugins +pulseaudio
 flaggie x11-base/xorg-server +glamor
 flaggie x11-libs/libdrm +video_cards_amdgpu
+flaggie gnome-base/gvfs +udisks
+flaggie net-print/cups -dbus
+emerge --deselect sys-fs/udev
 echo -e "# required for GNOME\n>=media-plugins/grilo-plugins-0.2.13 upnp-av" >> /etc/portage/package.use/grilo-plugins
 echo -e "# required for GNOME\n>=www-servers/apache-2.2.31 apache2_mpms_prefork" >> /etc/portage/package.use/apache
 echo -e "# required for GNOME\n>=net-fs/samba-4.2.14 client" >> /etc/portage/package.use/samba
@@ -32,7 +35,7 @@ printf "\n"
 echo "* Setting global USE flags in make.conf"
 echo " " >> /etc/portage/make.conf
 echo "# Global USE flag declaration" >> /etc/portage/make.conf
-echo "USE=\"X -gt4 -qt5 -kde dbus jpeg lock session startup-notification udev gnome networkmanager -systemd -minimal alsa pam tcpd ssl\"" >> /etc/portage/make.conf
+echo "USE=\"X -gt4 -qt5 -kde jpeg lock session startup-notification gnome networkmanager -minimal alsa pam tcpd ssl\"" >> /etc/portage/make.conf
 env-update && source /etc/profile && export PS1="(chroot) $PS1" 
 
 printf "\n"

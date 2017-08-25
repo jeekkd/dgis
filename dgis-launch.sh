@@ -28,6 +28,8 @@ DESTINATION=/mnt/gentoo
 # mount necessary filesystems for chroot environment
 function mountChroot() {
 	printf "\n"
+	printf "* Creating and entering chroot environment... \n"
+	printf "\n"
 	mkdir -p "$DESTINATION/proc"
 	mkdir -p "$DESTINATION/sys"
 	mkdir -p "$DESTINATION/dev"

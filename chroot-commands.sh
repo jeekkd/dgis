@@ -80,6 +80,7 @@ function selectProfile() {
 		printf "\n"
 		printf "* Listing profiles... \n"
 		printf "Note: If you chose Gnome as your desktop environment, now just select a regular, non-systemd, desktop profile and later you will be reprompted to select one of the Dantrell Gnome profiles. \n"
+		printf "Note: For Budgie, it recommended to select default/linux/amd64/13.0/systemd as the profile. \n"
 		printf "\n"
 		eselect profile list
 		printf "\n"
@@ -127,7 +128,10 @@ if [[ $installXorg == "Y" ]] || [[ $installXorg == "y" ]]; then
 		printf "E. Xmonad \n"
 		printf "F. Gnome \n"
 		printf "G. Lumina \n"
-		printf "H. Skip this selection \n"
+		printf "H. LXQt \n"
+		printf "I. Budgie \n"
+		printf "J. NA - server install \n"
+		printf "K. Skip this selection \n"
 		printf "\n"
 		printf "Enter a selection: \n"
 		read -r option			
@@ -168,11 +172,26 @@ if [[ $installXorg == "Y" ]] || [[ $installXorg == "y" ]]; then
 			break
 		;;
 		[Hh])
+			installDesktop=8
+			printf "LXQt has been selected for the Desktop Environment \n"
+			break
+		;;
+		[Ii])
+			installDesktop=9
+			printf "Budgie has been selected for the Desktop Environment \n"
+			break
+		;;
+		[Jj])
+			installDesktop=10
+			printf "The server mode install has been selected \n"
+			break
+		;;
+		[Kk])
 			printf "Skipping desktop environment selection.. \n"
 			break
 		;;
 		*)
-			printf "Error: enter a valid selection from the menu - options include A to H \n"
+			printf "Error: enter a valid selection from the menu - options include A to K \n"
 		;;	
 		esac 	
     done
@@ -504,6 +523,12 @@ elif [[ $installDesktop == "6" ]]; then
 	import gnome-install
 elif [[ $installDesktop == "7" ]]; then
 	import lumina-install
+elif [[ $installDesktop == "8" ]]; then
+	import lxqt-install
+elif [[ $installDesktop == "9" ]]; then
+	import budgie-install
+elif [[ $installDesktop == "10" ]]; then
+	import server-install
 fi
 
 printf "\n"
@@ -511,12 +536,13 @@ printf "* Beginning to emerge helpful and necessary programs such as hwinfo, usb
 flaggie app-admin/logrotate +acl
 flaggie app-admin/logrotate +cron
 
-confUpdate "sys-process/fcron app-admin/logrotate sys-apps/hwinfo app-admin/sudo app-admin/rsyslog net-firewall/iptables sys-apps/usbutils"
+confUpdate "app-admin/logrotate sys-apps/hwinfo app-admin/sudo app-admin/rsyslog net-firewall/iptables sys-apps/usbutils"
+confUpdate "sys-process/fcron"
 if [ $? -gt 0 ]; then
     usermod -aG cron root
-    gpasswd -a "$inputUser" video
-    gpasswd -a "$inputUser" cron
-    gpasswd -a "$inputUser" wheel
+    usermod -aG video "$inputUser"
+    usermod -aG cron "$inputUser"
+    usermod -aG wheel "$inputUser"
 fi
     
 printf "\n"

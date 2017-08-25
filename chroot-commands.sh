@@ -126,12 +126,11 @@ if [[ $installXorg == "Y" ]] || [[ $installXorg == "y" ]]; then
 		printf "C. Ratpoison \n"
 		printf "D. LXDE \n"
 		printf "E. Xmonad \n"
-		printf "F. Gnome \n"
+		printf "F. Gnome - In development \n"
 		printf "G. Lumina \n"
 		printf "H. LXQt \n"
-		printf "I. Budgie \n"
-		printf "J. NA - server install \n"
-		printf "K. Skip this selection \n"
+		printf "I. Budgie - In development  \n"
+		printf "J. Skip this selection \n"
 		printf "\n"
 		printf "Enter a selection: \n"
 		read -r option			
@@ -182,16 +181,11 @@ if [[ $installXorg == "Y" ]] || [[ $installXorg == "y" ]]; then
 			break
 		;;
 		[Jj])
-			installDesktop=10
-			printf "The server mode install has been selected \n"
-			break
-		;;
-		[Kk])
 			printf "Skipping desktop environment selection.. \n"
 			break
 		;;
 		*)
-			printf "Error: enter a valid selection from the menu - options include A to K \n"
+			printf "Error: enter a valid selection from the menu - options include A to J \n"
 		;;	
 		esac 	
     done
@@ -204,6 +198,36 @@ if [[ $installXorg == "Y" ]] || [[ $installXorg == "y" ]]; then
 		printf "Install default set of applications? [y/n] \n"
 		read -r installApplications	
 	fi
+elif [[ $installXorg == "N" || $installXorg == "n" ]]; then
+	printf "\n"
+	while true ; do
+		printf "\n"
+		printf "=================================== \n" 
+		printf "Headless mode Selection menu \n"
+		printf "=================================== \n"
+		printf "\n"
+		printf "A. Generic server \n"
+		printf "B. Continue without a dgis profile \n"
+		printf "\n"
+		printf "Enter a selection: \n"
+		read -r option			
+		case "$option" in				
+		[Aa])
+			installHeadless=1
+			printf "The generic server mode install has been selected \n"
+			break
+		;;
+		[Bb])
+			printf "Skipping headless mode selection.. \n"
+			break
+		;;
+		*)
+			printf "Error: enter a valid selection from the menu - options include A to B \n"
+		;;	
+		esac 	
+    done		
+else
+	printf "Error: Enter [y/n] as your selection. \n"
 fi
 
 cd dgis/
@@ -335,7 +359,17 @@ for (( ; ; )); do
 		printf "\n"
 		printf "* Enter a password for $inputUser \n"
 		passwd "$inputUser"
-		break
+		printf "\n"
+		printf "Would you like to create another user account?. Enter [y/n] \n"
+		read -r usernameConfirm
+		if [[ $usernameConfirm == "Y" || $usernameConfirm == "y" ]]; then
+			printf "Continuing user creation.. \n"
+		elif [[ $usernameConfirm == "N" || $usernameConfirm == "n" ]]; then
+			printf "No was selected, skipping creating more users.. \n"
+			break
+		else
+			printf "Error: Enter either the letters Y or N as your selection. \n"
+		fi
 	elif [[ $usernameConfirm == "N" || $usernameConfirm == "n" ]]; then
 		printf "No was selected, re-asking for correct username\n"
 	else
@@ -371,7 +405,7 @@ for (( ; ; )); do
 	printf "Enter the number of your selection: \n"
 	read -r localeSelection
 	localeNumber=$(eselect locale list | cut -f 3 -d " " | grep "$localeSelection")
-	localeSelection=$(eselect locale list | grep "$localeNumber" | cut -f 6 -d " ")
+	localeSelection=$(eselect locale list | sed '1d' | sed "${localeNumber}q;d" | cut -f 6 -d " ")
 	printf "\n"
 	printf "Confirm that $localeSelection is the desired locale. Enter [y/n] \n"
 	read -r localeConfirm
@@ -527,7 +561,10 @@ elif [[ $installDesktop == "8" ]]; then
 	import lxqt-install
 elif [[ $installDesktop == "9" ]]; then
 	import budgie-install
-elif [[ $installDesktop == "10" ]]; then
+fi
+
+# Installing headless mode selection
+if [[ $installHeadless == "1" ]]; then
 	import server-install
 fi
 

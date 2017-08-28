@@ -64,6 +64,49 @@ isInstalled() {
     fi
 }
 
+# askStaticAddress
+# Ask if the user wishes to set static IP addressing, rather then the default DHCP. Used within the
+# server profiles.
+askStaticAddress() {
+	for (( ; ; )); do
+		printf " * Would you like to statically set your IP address? Enter [y/n] \n"
+		read -r staticAddressAnswer
+		if [[ $staticAddressAnswer == "Y" || $staticAddressAnswer == "y" ]]; then
+			ip link
+			printf "\n"
+			printf "Type the adapter name to configure. Ex: eth0 \n"
+			read -r adapterName
+			printf "\n"
+			printf "Enter the address this adapter should have. Ex: 172.16.53.10 \n"
+			read -r adapterAddress
+			printf "\n"
+			printf "Enter the netmask of the address. Ex: 255.255.255.0 \n"
+			read -r adapterNetmask
+			printf "\n"
+			printf "Enter the gateway to use. Ex: 172.16.53.1 \n"
+			read -r adapterGateway
+			printf "\n"
+			printf "Enter the DNS server to use. Ex: 8.8.4.4 \n"
+			read -r adapterDNS
+			printf "\n"
+			echo "config_$adapterName=\"$adapterAddress netmask $adapterNetmask\"" >> /etc/conf.d/net
+			echo "routes_$adapterName=\"default via $adapterGateway\"" >> /etc/conf.d/net
+			echo "dns_servers_$adapterName=\"$adapterDNS\"" >> /etc/conf.d/net
+			
+			ln -s /etc/init.d/net.lo /etc/init.d/net."$adapterName"
+			/etc/init.d/net."$adapterName" start
+			rc-update add net."$adapterName" default
+			rc-update del dhcpcd default
+			break
+		elif [[ $staticAddressAnswer == "N" || $staticAddressAnswer == "n" ]]; then
+			printf "No was selected, keeping DHCP as the default. \n"
+			break
+		else
+			printf "Error: Invalid selection, Enter [y/n] \n"
+		fi
+	done
+}
+
 # finish
 # Preform these actions once the script is done running
 function finish {
@@ -108,6 +151,17 @@ function selectProfile() {
 			printf "Error: Please enter the numbers 1 to 40 as your input. Anything else is an invalid option. \n"
 		fi
 	done
+	
+	isHardnedSelected=$(eselect profile list | grep "*" | grep "hardened")
+	if [ ! -z ${isHardnedSelected+x} ]; then 
+		printf "\n"
+		printf "* Hardened profile is selected, configuring hardened toolchain \n"
+		emerge --oneshot gcc
+		gcc-config 1
+		env-update && source /etc/profile
+		emerge --oneshot binutils virtual/libc
+		confUpdate "--emptytree @world"
+	fi
 }
 
 printf "\n"
@@ -207,7 +261,8 @@ elif [[ $installXorg == "N" || $installXorg == "n" ]]; then
 		printf "=================================== \n"
 		printf "\n"
 		printf "A. Generic server \n"
-		printf "B. Continue without a dgis profile \n"
+		printf "B. KVM qemu server \n"
+		printf "C. Continue without a dgis profile \n"
 		printf "\n"
 		printf "Enter a selection: \n"
 		read -r option			
@@ -218,11 +273,16 @@ elif [[ $installXorg == "N" || $installXorg == "n" ]]; then
 			break
 		;;
 		[Bb])
+			installHeadless=2
+			printf "The KVM Qemu server mode install has been selected \n"
+			break
+		;;
+		[Cc])
 			printf "Skipping headless mode selection.. \n"
 			break
 		;;
 		*)
-			printf "Error: enter a valid selection from the menu - options include A to B \n"
+			printf "Error: enter a valid selection from the menu - options include A to C \n"
 		;;	
 		esac 	
     done		
@@ -404,7 +464,7 @@ for (( ; ; )); do
 	printf "\n"
 	printf "Enter the number of your selection: \n"
 	read -r localeSelection
-	localeNumber=$(eselect locale list | cut -f 3 -d " " | grep "$localeSelection")
+	localeNumber=$(eselect locale list | cut -f 3 -d " " | grep "$localeSelection" | sed 's/[^0-9]*//g')
 	localeSelection=$(eselect locale list | sed '1d' | sed "${localeNumber}q;d" | cut -f 6 -d " ")
 	printf "\n"
 	printf "Confirm that $localeSelection is the desired locale. Enter [y/n] \n"
@@ -566,6 +626,8 @@ fi
 # Installing headless mode selection
 if [[ $installHeadless == "1" ]]; then
 	import server-install
+elif [[ $installHeadless == "2" ]]; then
+	import kvm-server-install
 fi
 
 printf "\n"
@@ -579,8 +641,11 @@ if [ $? -gt 0 ]; then
     usermod -aG cron root
     usermod -aG video "$inputUser"
     usermod -aG cron "$inputUser"
-    usermod -aG wheel "$inputUser"
 fi
+
+# Comment out the line %wheel ALL=(ALL) ALL in /etc/sudoers
+sed -Ei 's/^# (%wheel.*ALL.*)/\1/' /etc/sudoers
+usermod -aG wheel "$inputUser"
     
 printf "\n"
 printf "* Adding startup items to OpenRC for boot.. \n"

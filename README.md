@@ -16,10 +16,8 @@ Supported Desktop Environments and Window Managers
 - Ratpoison
 - LXDE
 - Xmonad
-- Gnome (in development)
 - Lumina
 - LXQt
-- Budgie (in development)
 
 > **Note:** 
 > There are more to come, but open an issue to request a specific one or see the Contributing section to

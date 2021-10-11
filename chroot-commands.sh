@@ -7,7 +7,7 @@
 #
 ################## VARIABLES ##################
 # Default nameserver to set in resolv.conf
-defaultNameserver="8.8.8.8"
+defaultNameserver="1.1.1.1"
 
 # Default timezone
 timezone="Canada/Central"
@@ -51,11 +51,11 @@ confUpdate() {
 	env-update && source /etc/profile && export PS1="(chroot) $PS1"	
 }
 
-# isInstalled
+# checkThenInstall
 # If given a valid package atom it will check if the package is installed on the local system
-# Example: isInstalled "sys-kernel/genkernel-next" 
+# Example: checkThenInstall "sys-kernel/genkernel-next" 
 # If the package is not installed it will call confUpdate and install the package
-isInstalled() {
+checkThenInstall() {
 	local package=$1
 	local packageTest=
     packageTest=$(equery -q list "$package")
@@ -69,7 +69,7 @@ isInstalled() {
 # server profiles.
 askStaticAddress() {
 	for (( ; ; )); do
-		printf " * Would you like to statically set your IP address? Enter [y/n] \n"
+		printf " * Would you like to statically set your IP address? If you want to use DHCP, press N. Enter [y/n] \n"
 		read -r staticAddressAnswer
 		if [[ $staticAddressAnswer == "Y" || $staticAddressAnswer == "y" ]]; then
 			ip link
@@ -89,10 +89,11 @@ askStaticAddress() {
 			printf "Enter the DNS server to use. Ex: 8.8.4.4 \n"
 			read -r adapterDNS
 			printf "\n"
+
 			echo "config_$adapterName=\"$adapterAddress netmask $adapterNetmask\"" >> /etc/conf.d/net
 			echo "routes_$adapterName=\"default via $adapterGateway\"" >> /etc/conf.d/net
 			echo "dns_servers_$adapterName=\"$adapterDNS\"" >> /etc/conf.d/net
-			
+			printf "nameserver $adapterDNS\n" > /etc/resolv.conf
 			ln -s /etc/init.d/net.lo /etc/init.d/net."$adapterName"
 			/etc/init.d/net."$adapterName" start
 			rc-update add net."$adapterName" default
@@ -105,6 +106,16 @@ askStaticAddress() {
 			printf "Error: Invalid selection, Enter [y/n] \n"
 		fi
 	done
+}
+
+# ifSuccessBreak()
+# If the action directly occuring before the function is called is successful, break out of
+# the loop.
+ifSuccessBreak() {
+	if [ $? -eq 0 ]; then
+		printf "\n"
+		return 1
+	fi
 }
 
 # finish
@@ -164,10 +175,40 @@ function selectProfile() {
 	fi
 }
 
-printf "\n"
-printf "Install Xorg? Y/N \n"
-read -r installXorg
-if [[ $installXorg == "Y" ]] || [[ $installXorg == "y" ]]; then	
+while true ; do
+	printf "\n"
+	printf "Which Window system would you like to use? \n"
+	printf "A. Xorg \n"
+	printf "B. Wayland \n"
+	printf "C. Wayland with XWayland support \n"
+	printf "D. I do not want a GUI \n"
+	printf "\n"
+	printf "Enter a selection: \n"
+	read -r option			
+	case "$option" in				
+	[Aa])
+		displayChoice=1
+		break
+	;;
+	[Bb])
+		displayChoice=2
+		break
+	;;
+	[Cc])
+		displayChoice=3
+		break
+	;;
+	[Dd])
+		displayChoice=4
+		break
+	;;
+	*)
+		printf "Error: enter a valid selection from the menu - options include A to D \n"
+	;;	
+	esac
+done
+
+if [[ "$displayChoice" -le 3 ]]; then
 	printf "\n"
 	while true ; do
 		printf "\n"
@@ -252,7 +293,7 @@ if [[ $installXorg == "Y" ]] || [[ $installXorg == "y" ]]; then
 		printf "Install default set of applications? [y/n] \n"
 		read -r installApplications	
 	fi
-elif [[ $installXorg == "N" || $installXorg == "n" ]]; then
+elif [[ "$displayChoice" -eq 4 ]]; then
 	printf "\n"
 	while true ; do
 		printf "\n"
@@ -285,52 +326,8 @@ elif [[ $installXorg == "N" || $installXorg == "n" ]]; then
 			printf "Error: enter a valid selection from the menu - options include A to C \n"
 		;;	
 		esac 	
-    done		
-else
-	printf "Error: Enter [y/n] as your selection. \n"
+    done
 fi
-
-cd dgis/
-
-# Set DNS server
-for (( ; ; )); do
-	printf "\n"
-	printf "Press 1 - Use the default Google 8.8.8.8 nameserver \n"
-	printf "Press 2 - Enter one of your own \n"
-	read -r nameserverOptions
-	if [[ $nameserverOptions == "1" ]]; then
-		printf "nameserver $defaultNameserver\n" > /etc/resolv.conf
-		if [ $? -gt 0 ]; then
-			printf "Error: Failed to set nameserver to $nameServer\n"
-			exit 1
-		fi
-		break	
-	elif [[ $nameserverOptions == "2" ]]; then
-		for (( ; ; )); do
-			printf "\n"
-			printf "Enter a nameserver in dotted decimal format such as 8.8.8.8\n"
-			read -r enteredNameserver
-			printf "\n"
-			printf "Confirm that $enteredNameserver is the connect nameserver. Enter [y/n] \n"
-			read -r nameserverConfirm
-			if [[ $nameserverConfirm == "Y" || $nameserverConfirm == "y" ]]; then
-				printf "nameserver $enteredNameserver\n" > /etc/resolv.conf
-				if [ $? -gt 0 ]; then
-					printf "Error: Failed to set nameserver to $enteredNameserver..\n"
-					exit 1
-				fi
-				break
-			elif [[ $nameserverConfirm == "N" || $nameserverConfirm == "n" ]]; then
-				printf "No was selected, re-asking for the correct nameserver \n"
-			else
-				printf "Error: Enter [y/n] as your selection. \n"
-			fi
-		done
-		break
-	else
-		printf "Error: Enter either the number 1 or 2 as your selection.\n"
-	fi
-done
 
 # Configuring system basics
 mkdir -p /etc/portage/repos.conf/
@@ -376,6 +373,9 @@ fi
 # Profile selection menu
 selectProfile
 
+# Ask if the user wants to use a static address or DHCP
+askStaticAddress
+
 # Getting time zone data
 for (( ; ; )); do
 	printf "\n"
@@ -402,9 +402,12 @@ printf "* Setting hostname... \n"
 nano -w /etc/conf.d/hostname
 
 # Setting the root password
-printf "\n"
-printf "* Enter a password for the root account: \n"
-passwd root 
+for (( ; ; )); do
+	printf "\n"
+	printf "* Enter a password for the root account: \n"
+	passwd root
+	ifSuccessBreak
+done
 
 # Creating the user account and setting its password
 for (( ; ; )); do
@@ -556,50 +559,80 @@ printf "\n"
 printf "* Emerging git, flaggie, dhcpcd... \n"
 confUpdate "dev-vcs/git app-portage/flaggie net-misc/dhcpcd"
 
-# Install and build kernel
-printf "\n"
-printf "* Cloning repo for my gentoo_kernel_build script to build the kernel \n"
-printf "\n"
-git clone https://github.com/jeekkd/gentoo-kernel-build.git && cd gentoo-kernel-build
-if [ $? -eq 0 ]; then	
-	chmod 770 build-kernel.sh
-	bash build-kernel.sh
-	if [ $? -gt 0 ]; then	
-		for (( ; ; )); do
-			printf "Error: build_kernel.sh failed - try again? Enter [y/n] \n"
-			read -r kernelBuildRetry
-			if [[ $kernelBuildRetry == "Y" ]] || [[ $kernelBuildRetry == "y" ]]; then	
-				bash build-kernel.sh
-			elif [[ $kernelBuildRetry == "N" ]] || [[ $kernelBuildRetry == "n" ]]; then	
-				printf "No selected, skipping retrying kernel build. \n"
-				break
+while true ; do
+	printf "\n"
+	printf "Would you like to use gentoo-kernel-bin, or my kernel build script? \n"
+	printf "A. gentoo-kernel-bin - Pre-built Linux kernel with genpatches \n"
+	printf "B. Kernel build script - Review at https://github.com/jeekkd/gentoo-kernel-build \n"
+	printf "\n"
+	printf "Enter a selection: \n"
+	read -r option			
+	case "$option" in				
+	[Aa])
+		confUpdate "sys-kernel/gentoo-kernel-bin"
+		ifSuccessBreak
+	;;
+	[Bb])
+		printf "\n"
+		printf "* Cloning repo for my gentoo_kernel_build script to build the kernel \n"
+		printf "\n"
+		git clone https://github.com/jeekkd/gentoo-kernel-build.git && cd gentoo-kernel-build
+		if [ $? -eq 0 ]; then	
+			chmod 770 build-kernel.sh
+			bash build-kernel.sh
+			if [ $? -gt 0 ]; then	
+				for (( ; ; )); do
+					printf "Error: build_kernel.sh failed - try again? Enter [y/n] \n"
+					read -r kernelBuildRetry
+					if [[ $kernelBuildRetry == "Y" ]] || [[ $kernelBuildRetry == "y" ]]; then	
+						bash build-kernel.sh
+					elif [[ $kernelBuildRetry == "N" ]] || [[ $kernelBuildRetry == "n" ]]; then	
+						printf "No selected, skipping retrying kernel build. \n"
+						break
+					else
+						printf "Error: Invalid selection, Enter [y/n] \n"
+					fi
+				done
 			else
-				printf "Error: Invalid selection, Enter [y/n] \n"
+				cd ..
 			fi
-		done
-	else
-		cd ..
-	fi
-else
-	printf "Error: git clone failed for retrieving kernel build script from the following location https://github.com/jeekkd/gentoo-kernel-build \n"
-	exit 1
-fi
+		else
+			printf "Error: git clone failed for retrieving kernel build script from the following location https://github.com/jeekkd/gentoo-kernel-build \n"
+			exit 1
+		fi
+	;;
+	*)
+		printf "Error: enter a valid selection from the menu - options include A or B \n"
+	;;	
+	esac
+done
 
-# Installing Xorg
-# Add or remove contents of VIDEO_CARDS and INPUT_DEVICES as necessary, this current configuration is
-# meant to encompass a variety of setups for ease of use to the user
-if [[ $installXorg == "Y" ]] || [[ $installXorg == "y" ]]; then	
-	flaggie sys-apps/busybox -static
-	isInstalled "sys-apps/busybox"
-	printf " \n" >> /etc/portage/make.conf
-	printf "# Video and input devices for Xorg \n" >> /etc/portage/make.conf
-	printf "VIDEO_CARDS=\"amndgpu fbdev vesa radeon radeonsi nouveau intel\" \n" >> /etc/portage/make.conf
-	printf "INPUT_DEVICES=\"keyboard mouse synaptics evdev\" \n" >> /etc/portage/make.conf
-	env-update && source /etc/profile
+# Install the display server choice
+if [[ "$displayChoice" -eq 1 ]]; then
+	# Xorg
 	printf "\n"
 	printf "* Xorg installation.. \n"
 	emerge --deep --with-bdeps=y --changed-use --update -q @world
 	confUpdate "x11-base/xorg-server"
+elif [[ "$displayChoice" -eq 2 ]]; then
+	# Wayland
+
+elif [[ "$displayChoice" -eq 3 ]]; then
+	# Wayland with xWayland support
+
+fi
+
+# Add or remove contents of VIDEO_CARDS and INPUT_DEVICES as necessary, this current configuration is
+# meant to encompass a variety of setups for ease of use to the user
+if [[ "$displayChoice" -le 3 ]]; then
+	flaggie sys-apps/busybox -static
+	checkThenInstall "sys-apps/busybox"
+	printf " \n" >> /etc/portage/make.conf
+	printf "# Video and input devices for Xorg \n" >> /etc/portage/make.conf
+	printf "VIDEO_CARDS=\"amndgpu fbdev vesa radeon radeonsi nouveau intel\" \n" >> /etc/portage/make.conf
+	printf "INPUT_DEVICES=\"keyboard mouse synaptics evdev\" \n" >> /etc/portage/make.conf
+	# shellcheck source=/dev/null
+	env-update && . /etc/profile
 fi
 
 # Installing desktop environment or window manager selection
@@ -626,17 +659,13 @@ fi
 # Installing headless mode selection
 if [[ $installHeadless == "1" ]]; then
 	import server-install
-elif [[ $installHeadless == "2" ]]; then
-	import kvm-server-install
 fi
 
 printf "\n"
 printf "* Beginning to emerge helpful and necessary programs such as hwinfo, usbutils, sudo, rsyslog... \n"
 flaggie app-admin/logrotate +acl
 flaggie app-admin/logrotate +cron
-
-confUpdate "app-admin/logrotate sys-apps/hwinfo app-admin/sudo app-admin/rsyslog net-firewall/iptables sys-apps/usbutils"
-confUpdate "sys-process/fcron"
+confUpdate "net-misc/chrony app-admin/logrotate sys-apps/hwinfo app-admin/sudo app-admin/rsyslog net-firewall/iptables sys-apps/usbutils sys-process/fcron"
 if [ $? -gt 0 ]; then
     usermod -aG cron root
     usermod -aG video "$inputUser"
@@ -652,9 +681,9 @@ printf "* Adding startup items to OpenRC for boot.. \n"
 rc-update add consolekit default
 rc-update add xdm default
 rc-update add dbus default
-rc-update add dhcpcd default
 rc-update add rsyslog default
 rc-update add fcron default
+rc-update add chronyd default
 
 if [[ $firmwareAnswer == "Y" || $firmwareAnswer == "y" ]]; then
 	confUpdate "sys-kernel/linux-firmware"
@@ -670,7 +699,7 @@ if [ -f "$script_dir"/modules/post-install-configuration.sh ]; then
 fi
 
 if [[ $iptablesAnswer == "Y" || $iptablesAnswer == "y" ]]; then
-	isInstalled "net-firewall/iptables"
+	checkThenInstall "net-firewall/iptables"
 	printf "\n"
 	git clone https://github.com/jeekkd/restricted-iptables
 	printf "\n"

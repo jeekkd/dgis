@@ -13,7 +13,7 @@ flaggie net-libs/libvncserver +threads
 flaggie app-text/poppler +qt4
 
 echo "* Installing KDE desktop environment and extras"
-confUpdate "kde-plasma/plasma-meta kde-plasma/kdeplasma-addons kde-apps/kde-apps-meta"
+confUpdate "kde-plasma/plasma-meta kde-plasma/kdeplasma-addons kde-apps/kde-apps-meta kde-plasma/kwallet-pam"
 
 echo "* Changing default display manager to SDDM"
 sed -i 's/xdm/sddm/g' /etc/conf.d/xdm

@@ -41,7 +41,6 @@ function mountChroot() {
 	mount --make-rslave "$DESTINATION/dev"
 	
 	chroot /mnt/gentoo dgis/chroot-commands.sh
-	. /etc/profile
 	export PS1="(chroot) $PS1"
 	export PS1="(chroot) $PS1"
 }
@@ -51,23 +50,17 @@ function mountChroot() {
 function stage3Download() {
 	printf "\n"
 	printf "Downloading the stage 3 tarball... \n"	
-	LATEST=$(wget --quiet http://distfiles.gentoo.org/releases/amd64/autobuilds/latest-stage3-amd64.txt -O-| tail -n 1 | cut -d " " -f 1)
-	BASENAME=$(basename "$LATEST")
-	wget -q --show-progress "http://distfiles.gentoo.org/releases/amd64/autobuilds/$LATEST" -O "$DESTINATION/$BASENAME"
-		
-	BASENAME=$(basename "$STAGE3")
-	wget -q --show-progress "$STAGE3" -O "$DESTINATION/$BASENAME"
 
 	ARCH=amd64
 	MICROARCH=amd64
 	SUFFIX=openrc
 	DIST="https://ftp-osl.osuosl.org/pub/gentoo/releases/${ARCH}/autobuilds"
 	SIGNING_KEY="0xBB572E0E2D182910"
-	STAGE3PATH="$(wget -O- "${DIST}/latest-stage3-${MICROARCH}${SUFFIX}.txt" | tail -n 1 | cut -f 1 -d ' ')"
+	STAGE3PATH="$(wget -q -O- "${DIST}/latest-stage3-${MICROARCH}-${SUFFIX}.txt" | tail -n 1 | cut -f 1 -d ' ')"
 	STAGE3="$(basename ${STAGE3PATH})"
 	
-	wget -q "${DIST}/${STAGE3PATH}" "${DIST}/${STAGE3PATH}.CONTENTS.gz" "${DIST}/${STAGE3PATH}.DIGESTS.asc"
-	gpg --keyserver hkps://keys.gentoo.org --recv-keys ${SIGNING_KEY}
+	#wget -q --show-progress "${DIST}/${STAGE3PATH}" "${DIST}/${STAGE3PATH}.CONTENTS.gz" "${DIST}/${STAGE3PATH}.DIGESTS.asc"
+	#gpg --keyserver hkps://keys.gentoo.org --recv-keys ${SIGNING_KEY}
 	gpg --verify "${STAGE3}.DIGESTS.asc"
 	awk '/# SHA512 HASH/{getline; print}' ${STAGE3}.DIGESTS.asc | sha512sum -c
 }
@@ -90,6 +83,6 @@ else
 	stage3Download
 	printf "\n"
 	printf "Extracting stage 3 tarball... \n"
-	tar xpf "${STAGE3}" --xattrs-include='*.*' --numeric-owner
+	tar xpf stage3-*.tar.xz --xattrs-include='*.*' --numeric-owner
 	mountChroot
 fi

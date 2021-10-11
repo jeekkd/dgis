@@ -58,11 +58,11 @@ function stage3Download() {
 	BASENAME=$(basename "$STAGE3")
 	wget -q --show-progress "$STAGE3" -O "$DESTINATION/$BASENAME"
 
-	ARG ARCH=amd64
-	ARG MICROARCH=amd64
-	ARG SUFFIX
-	ARG DIST="https://ftp-osl.osuosl.org/pub/gentoo/releases/${ARCH}/autobuilds"
-	ARG SIGNING_KEY="0xBB572E0E2D182910"
+	ARCH=amd64
+	MICROARCH=amd64
+	SUFFIX=openrc
+	DIST="https://ftp-osl.osuosl.org/pub/gentoo/releases/${ARCH}/autobuilds"
+	SIGNING_KEY="0xBB572E0E2D182910"
 	STAGE3PATH="$(wget -O- "${DIST}/latest-stage3-${MICROARCH}${SUFFIX}.txt" | tail -n 1 | cut -f 1 -d ' ')"
 	STAGE3="$(basename ${STAGE3PATH})"
 	
